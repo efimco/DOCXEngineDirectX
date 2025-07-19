@@ -1,0 +1,3 @@
+C:/Users/lants/Desktop/junkyard/TimeToDX/build/CMakeFiles/TimeToDX.dir
+C:/Users/lants/Desktop/junkyard/TimeToDX/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/lants/Desktop/junkyard/TimeToDX/build/CMakeFiles/ZERO_CHECK.dir
