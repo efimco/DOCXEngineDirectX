@@ -3,10 +3,11 @@ project(TimeToDX VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(TimeToDX
-    src/main.cpp
-    src/window.cpp
+file(GLOB_RECURSE SOURCE_FILES 
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
 )
+
+add_executable(TimeToDX ${SOURCE_FILES})
 
 target_link_libraries(TimeToDX
     d3d11
