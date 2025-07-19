@@ -220,7 +220,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 
 		{
 			ComPtr<ID3DBlob> shaderCompileErrorsBlob;
-			HRESULT hr = D3DCompileFromFile(L"main.hlsl", nullptr, nullptr, "VS", "vs_5_0", 0, 0, &vsBlob, &shaderCompileErrorsBlob);
+			HRESULT hr = D3DCompileFromFile(L"shaders/main.hlsl", nullptr, nullptr, "VS", "vs_5_0", 0, 0, &vsBlob, &shaderCompileErrorsBlob);
 			if (FAILED(hr))
 			{
 				const char* errorString = NULL;
@@ -249,7 +249,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 
 		{
 			ComPtr<ID3DBlob> shaderCompileErrorsBlob;
-			HRESULT hr = D3DCompileFromFile(L"main.hlsl", nullptr, nullptr, "PS", "ps_5_0", 0, 0, &psBlob, &shaderCompileErrorsBlob);
+			HRESULT hr = D3DCompileFromFile(L"shaders/main.hlsl", nullptr, nullptr, "PS", "ps_5_0", 0, 0, &psBlob, &shaderCompileErrorsBlob);
 			if (FAILED(hr))
 			{
 				const char* errorString;
