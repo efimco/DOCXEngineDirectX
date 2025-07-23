@@ -5,5 +5,6 @@
 
 namespace SceneManager
 {
-	static std::vector<Primitive> primitives;
-}
+	void addPrimitive(Primitive&& primitive);
+	inline static std::vector<Primitive> primitives;
+};

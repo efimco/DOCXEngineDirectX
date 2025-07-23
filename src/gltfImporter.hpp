@@ -1,7 +1,4 @@
 #pragma once
-#define TINYGLTF_IMPLEMENTATION
-#define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
 
 #include "tiny_gltf.h"
 #include <string>
@@ -24,6 +21,7 @@ private:
 	void processGlb(const tinygltf::Model& model);
 	void processPosAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive);
 	void processTexCoordAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive);
+	void processIndexAttrib(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive);
 	// void processNormalsAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive);
 	// void processTangentAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive);
 	ComPtr<ID3D11Device>& m_device;
@@ -31,5 +29,6 @@ private:
 	std::vector<TexCoords> m_texCoordsBuffer;
 	std::vector<Normals> m_normalBuffer;
 	std::vector<Tangents> m_tangentBuffer;
+	std::vector<uint32_t> m_indices;
 
 };

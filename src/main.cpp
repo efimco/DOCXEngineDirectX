@@ -12,9 +12,11 @@
 #include <iostream>
 #include <vector>
 #include <wrl.h>
+#include <filesystem>
 
 #include "dxCompiler.hpp"
 #include "dxDevice.hpp"
+#include "gltfImporter.hpp"
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
@@ -111,7 +113,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 	size_t numIndices = indices.size();
 	ComPtr<ID3D11Buffer> vertexBuffer;
 	size_t numVert = vBuf.size();
-
 	{
 		D3D11_BUFFER_DESC vertexBufferDesc = {};
 		vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
@@ -134,17 +135,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 		{"POS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		{"TEX", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	};
-
-	// struct D3D11_INPUT_ELEMENT_DESC
-	// {
-	// LPCSTR SemanticName;
-	// UINT SemanticIndex;
-	// DXGI_FORMAT Format;
-	// UINT InputSlot;
-	// UINT AlignedByteOffset;
-	// D3D11_INPUT_CLASSIFICATION InputSlotClass;
-	// UINT InstanceDataStepRate;
-	// }
 
 	ComPtr<ID3D11VertexShader> vertexShader;
 	ComPtr<ID3D11PixelShader> pixelShader;
@@ -210,6 +200,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 
 	std::chrono::system_clock::time_point prevTime = std::chrono::system_clock::now();
 	std::chrono::duration<double> deltaTime;
+
+	GLTFModel gltfModel(std::filesystem::absolute("..\\..\\res\\Knight.glb").string(), dxDevice.getDevice());
+
 	MSG message = {};
 	while (message.message != WM_QUIT)
 	{
