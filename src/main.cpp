@@ -65,34 +65,35 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 	};
 
 	std::vector<Vertex> vBuf =
-		{
-			// Front face
-			{-0.5f, -0.5f, 0.5f, 0.0f, 1.0f}, // 0
-			{0.5f, -0.5f, 0.5f, 1.0f, 1.0f},  // 1
-			{0.5f, 0.5f, 0.5f, 1.0f, 0.0f},	  // 2
-			{-0.5f, 0.5f, 0.5f, 0.0f, 0.0f},  // 3
+	{
+		// Front face
+		{-0.5f, -0.5f, 0.5f, 0.0f, 1.0f}, // 0
+		{0.5f, -0.5f, 0.5f, 1.0f, 1.0f},  // 1
+		{0.5f, 0.5f, 0.5f, 1.0f, 0.0f},	  // 2
+		{-0.5f, 0.5f, 0.5f, 0.0f, 0.0f},  // 3
 
-			// Back face
-			{0.5f, -0.5f, -0.5f, 0.0f, 1.0f},  // 4
-			{-0.5f, -0.5f, -0.5f, 1.0f, 1.0f}, // 5
-			{-0.5f, 0.5f, -0.5f, 1.0f, 0.0f},  // 6
-			{0.5f, 0.5f, -0.5f, 0.0f, 0.0f}	   // 7
-		};
+		// Back face
+		{0.5f, -0.5f, -0.5f, 0.0f, 1.0f},  // 4
+		{-0.5f, -0.5f, -0.5f, 1.0f, 1.0f}, // 5
+		{-0.5f, 0.5f, -0.5f, 1.0f, 0.0f},  // 6
+		{0.5f, 0.5f, -0.5f, 0.0f, 0.0f}	   // 7
+	};
 
 	std::vector<unsigned int> indices =
-		{
-			// Front face
-			0, 1, 2, 0, 2, 3,
-			// Back face
-			4, 5, 6, 4, 6, 7,
-			// Left face
-			5, 0, 3, 5, 3, 6,
-			// Right face
-			1, 4, 7, 1, 7, 2,
-			// Top face
-			3, 2, 7, 3, 7, 6,
-			// Bottom face
-			5, 4, 1, 5, 1, 0};
+	{
+		// Front face
+		0, 1, 2, 0, 2, 3,
+		// Back face
+		4, 5, 6, 4, 6, 7,
+		// Left face
+		5, 0, 3, 5, 3, 6,
+		// Right face
+		1, 4, 7, 1, 7, 2,
+		// Top face
+		3, 2, 7, 3, 7, 6,
+		// Bottom face
+		5, 4, 1, 5, 1, 0
+	};
 
 	ComPtr<ID3D11Buffer> indexBuffer;
 	{
@@ -114,7 +115,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 	{
 		D3D11_BUFFER_DESC vertexBufferDesc = {};
 		vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-		vertexBufferDesc.ByteWidth = static_cast<UINT>(vBuf.size() * sizeof(Vertex));
+		vertexBufferDesc.ByteWidth = static_cast<UINT>(numVert * sizeof(Vertex));
 		vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 		vertexBufferDesc.CPUAccessFlags = 0;
 		vertexBufferDesc.MiscFlags = 0;
@@ -129,10 +130,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 	}
 
 	D3D11_INPUT_ELEMENT_DESC inputDesc[] =
-		{
-			{"POS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-			{"TEX", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		};
+	{
+		{"POS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"TEX", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+	};
 
 	// struct D3D11_INPUT_ELEMENT_DESC
 	// {
@@ -242,7 +243,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 					hr = dxDevice.getContext()->Map(constantbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 					if (SUCCEEDED(hr))
 					{
-						ConstantBufferData *cbData = static_cast<ConstantBufferData *>(mappedResource.pData);
+						ConstantBufferData* cbData = static_cast<ConstantBufferData*>(mappedResource.pData);
 						cbData->modelViewProjection = XMMatrixTranspose(modelViewProjection);
 						dxDevice.getContext()->Unmap(constantbuffer.Get(), 0);
 					}
@@ -265,7 +266,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 		HRESULT hr = dxDevice.getContext()->Map(constantbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 		if (SUCCEEDED(hr))
 		{
-			ConstantBufferData *cbData = static_cast<ConstantBufferData *>(mappedResource.pData);
+			ConstantBufferData* cbData = static_cast<ConstantBufferData*>(mappedResource.pData);
 			cbData->modelViewProjection = XMMatrixTranspose(modelViewProjection);
 			dxDevice.getContext()->Unmap(constantbuffer.Get(), 0);
 		}
@@ -273,7 +274,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 		dxDevice.getContext()->RSSetState(rasterizerState.Get());
 		dxDevice.getContext()->OMSetDepthStencilState(depthStencilState.Get(), 0);
 		dxDevice.getContext()->OMSetRenderTargets(1, renderTargetView.GetAddressOf(), nullptr);
-		float clearColor[4] = {0.4f, 0.6f, 0.9f, 1.0f}; // blue
+		float clearColor[4] = { 0.4f, 0.6f, 0.9f, 1.0f }; // blue
 		dxDevice.getContext()->ClearRenderTargetView(renderTargetView.Get(), clearColor);
 
 		dxDevice.getContext()->VSSetShader(vertexShader.Get(), nullptr, 0);
