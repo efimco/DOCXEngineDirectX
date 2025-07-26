@@ -29,5 +29,5 @@ PixelInputType VS(VertexInputType input)
 
 float4 PS(PixelInputType input) : SV_TARGET
 {
-	return float4(normalize(input.normal) * 0.5f + 0.5f, 1.0f);
+	return float4(input.texCoord, 0.0f, 1.0f);
 }

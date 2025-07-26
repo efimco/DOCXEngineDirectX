@@ -24,4 +24,3 @@ target_include_directories(TimeToDX
 set_target_properties(TimeToDX PROPERTIES
     WIN32_EXECUTABLE TRUE
 )
-file(COPY ${CMAKE_SOURCE_DIR}/src/shaders DESTINATION ${CMAKE_BINARY_DIR}/Debug)

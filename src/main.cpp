@@ -17,7 +17,7 @@
 
 #include "window.hpp"
 #include "camera.hpp"
-#include "dxCompiler.hpp"
+#include "shaderManager.hpp"
 #include "dxDevice.hpp"
 #include "gltfImporter.hpp"
 #include "sceneManager.hpp"
@@ -29,7 +29,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 
 	DXDevice dxDevice(window.getHandle());
 
-	DXCompiler dxCompiler(dxDevice.getDevice());
+	ShaderManager shaderManager(dxDevice.getDevice());
 
 	ComPtr<ID3D11RasterizerState> rasterizerState;
 	{
@@ -91,17 +91,20 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 		assert(SUCCEEDED(hr));
 	}
 
-	ComPtr<ID3D11VertexShader> vertexShader;
-	ComPtr<ID3D11PixelShader> pixelShader;
 	ComPtr<ID3D11InputLayout> inputLayout;
 
-	dxCompiler.CompileFromFile(L"shaders/main.hlsl", nullptr, nullptr, "VS", "vs_5_0", 0, 0, &vertexShader);
+	shaderManager.LoadVertexShader("main", L"../../src/shaders/main.hlsl", "VS");
+	shaderManager.LoadPixelShader("main", L"../../src/shaders/main.hlsl", "PS");
 	{
-		HRESULT hr = dxDevice.getDevice()->CreateInputLayout(genericInputLayoutDesc, ARRAYSIZE(genericInputLayoutDesc), dxCompiler.getVsBlob()->GetBufferPointer(), dxCompiler.getVsBlob()->GetBufferSize(), &inputLayout);
+		HRESULT hr = dxDevice.getDevice()->CreateInputLayout(
+			genericInputLayoutDesc,
+			ARRAYSIZE(genericInputLayoutDesc),
+			shaderManager.getVertexShaderBlob("main")->GetBufferPointer(),
+			shaderManager.getVertexShaderBlob("main")->GetBufferSize(),
+			&inputLayout
+		);
 		assert(SUCCEEDED(hr));
-	}
-
-	dxCompiler.CompileFromFile(L"shaders/main.hlsl", nullptr, nullptr, "PS", "ps_5_0", 0, 0, &pixelShader);
+	};
 
 	ComPtr<ID3D11Buffer> constantbuffer;
 
@@ -226,6 +229,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 			DispatchMessage(&message);
 		}
 
+		static int frameCount = 0;
+		if (++frameCount % 60 == 0) // Check every 60 frames
+		{
+			shaderManager.checkForChanges();
+		}
+
 		std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
 		deltaTime = currentTime - prevTime;
 		// std::cout << deltaTime.count() << std::endl;
@@ -252,10 +261,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 		dxDevice.getContext()->ClearRenderTargetView(renderTargetView.Get(), clearColor);
 		dxDevice.getContext()->ClearDepthStencilView(depthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-		dxDevice.getContext()->VSSetShader(vertexShader.Get(), nullptr, 0);
+		dxDevice.getContext()->VSSetShader(shaderManager.getVertexShader("main"), nullptr, 0);
 		dxDevice.getContext()->VSSetConstantBuffers(0, 1, constantbuffer.GetAddressOf());
 
-		dxDevice.getContext()->PSSetShader(pixelShader.Get(), nullptr, 0);
+		dxDevice.getContext()->PSSetShader(shaderManager.getPixelShader("main"), nullptr, 0);
 
 		dxDevice.getContext()->IASetInputLayout(inputLayout.Get());
 		dxDevice.getContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
