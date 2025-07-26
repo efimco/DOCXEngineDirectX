@@ -6,5 +6,6 @@
 namespace SceneManager
 {
 	void addPrimitive(Primitive&& primitive);
-	inline static std::vector<Primitive> primitives;
+	std::vector<Primitive>& getPrimitives();
+	size_t getPrimitiveCount();
 };

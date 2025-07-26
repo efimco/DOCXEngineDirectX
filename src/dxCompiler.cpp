@@ -1,6 +1,8 @@
 #include "dxCompiler.hpp"
 #include <assert.h>
 #include <d3dcompiler.h>
+#include <iostream>
+
 DXCompiler::DXCompiler(ComPtr<ID3D11Device> &device) : m_device(device) {}
 
 void DXCompiler::CompileFromFile(LPCWSTR pFileName,
@@ -13,7 +15,7 @@ void DXCompiler::CompileFromFile(LPCWSTR pFileName,
 								 ID3D11PixelShader **ppPixelShader)
 {
 	ComPtr<ID3DBlob> shaderCompileErrorsBlob;
-	HRESULT hr = D3DCompileFromFile(L"shaders/main.hlsl", nullptr, nullptr, "PS", "ps_5_0", 0, 0, &m_psBlob, &shaderCompileErrorsBlob);
+	HRESULT hr = D3DCompileFromFile(pFileName, pDefines, pInclude, pEntrypoint, pTarget, flags1, flags2, &m_psBlob, &shaderCompileErrorsBlob);
 	if (FAILED(hr))
 	{
 		const char *errorString;
@@ -24,6 +26,7 @@ void DXCompiler::CompileFromFile(LPCWSTR pFileName,
 		else if (shaderCompileErrorsBlob)
 		{
 			errorString = (const char *)shaderCompileErrorsBlob->GetBufferPointer();
+			std::cout << errorString << std::endl;
 		}
 	}
 	assert(SUCCEEDED(hr));
@@ -41,7 +44,7 @@ void DXCompiler::CompileFromFile(LPCWSTR pFileName,
 								 ID3D11VertexShader **ppVertexShader)
 {
 	ComPtr<ID3DBlob> shaderCompileErrorsBlob;
-	HRESULT hr = D3DCompileFromFile(L"shaders/main.hlsl", nullptr, nullptr, "VS", "vs_5_0", 0, 0, &m_vsBlob, &shaderCompileErrorsBlob);
+	HRESULT hr = D3DCompileFromFile(pFileName, pDefines, pInclude, pEntrypoint, pTarget, flags1, flags2, &m_vsBlob, &shaderCompileErrorsBlob);
 	if (FAILED(hr))
 	{
 		const char *errorString;
@@ -52,6 +55,7 @@ void DXCompiler::CompileFromFile(LPCWSTR pFileName,
 		else if (shaderCompileErrorsBlob)
 		{
 			errorString = (const char *)shaderCompileErrorsBlob->GetBufferPointer();
+			std::cout << errorString << std::endl;
 		}
 	}
 	assert(SUCCEEDED(hr));

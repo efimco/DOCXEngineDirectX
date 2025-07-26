@@ -1,9 +1,8 @@
 #ifndef UNICODE
 #define UNICODE
 #endif
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
-#include "window.hpp"
-#include <DirectXMath.h>
 #include <assert.h>
 #include <chrono>
 #include <ctime>
@@ -13,13 +12,17 @@
 #include <vector>
 #include <wrl.h>
 #include <filesystem>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
+#include "window.hpp"
+#include "camera.hpp"
 #include "dxCompiler.hpp"
 #include "dxDevice.hpp"
 #include "gltfImporter.hpp"
+#include "sceneManager.hpp"
 
 using namespace Microsoft::WRL;
-using namespace DirectX;
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 {
 	Window window(hInstance);
@@ -60,117 +63,67 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 		assert(SUCCEEDED(hr));
 	}
 
-	struct Vertex
+	ComPtr<ID3D11Texture2D> depthStencilBuffer;
+	ComPtr<ID3D11DepthStencilView> depthStencilView;
 	{
-		float x, y, z, u, v;
-		Vertex(float _x, float _y, float _z, float _u, float _v) : x(_x), y(_y), z(_z), u(_u), v(_v) {};
-	};
+		D3D11_TEXTURE2D_DESC depthBufferDesc = {};
+		depthBufferDesc.Width = window.width;
+		depthBufferDesc.Height = window.height;
+		depthBufferDesc.MipLevels = 1;
+		depthBufferDesc.ArraySize = 1;
+		depthBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		depthBufferDesc.SampleDesc.Count = 1;
+		depthBufferDesc.SampleDesc.Quality = 0;
+		depthBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+		depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+		depthBufferDesc.CPUAccessFlags = 0;
+		depthBufferDesc.MiscFlags = 0;
 
-	std::vector<Vertex> vBuf =
-	{
-		// Front face
-		{-0.5f, -0.5f, 0.5f, 0.0f, 1.0f}, // 0
-		{0.5f, -0.5f, 0.5f, 1.0f, 1.0f},  // 1
-		{0.5f, 0.5f, 0.5f, 1.0f, 0.0f},	  // 2
-		{-0.5f, 0.5f, 0.5f, 0.0f, 0.0f},  // 3
+		HRESULT hr = dxDevice.getDevice()->CreateTexture2D(&depthBufferDesc, nullptr, &depthStencilBuffer);
+		assert(SUCCEEDED(hr));
 
-		// Back face
-		{0.5f, -0.5f, -0.5f, 0.0f, 1.0f},  // 4
-		{-0.5f, -0.5f, -0.5f, 1.0f, 1.0f}, // 5
-		{-0.5f, 0.5f, -0.5f, 1.0f, 0.0f},  // 6
-		{0.5f, 0.5f, -0.5f, 0.0f, 0.0f}	   // 7
-	};
+		D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc = {};
+		depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+		depthStencilViewDesc.Texture2D.MipSlice = 0;
 
-	std::vector<unsigned int> indices =
-	{
-		// Front face
-		0, 1, 2, 0, 2, 3,
-		// Back face
-		4, 5, 6, 4, 6, 7,
-		// Left face
-		5, 0, 3, 5, 3, 6,
-		// Right face
-		1, 4, 7, 1, 7, 2,
-		// Top face
-		3, 2, 7, 3, 7, 6,
-		// Bottom face
-		5, 4, 1, 5, 1, 0
-	};
-
-	ComPtr<ID3D11Buffer> indexBuffer;
-	{
-		D3D11_BUFFER_DESC indexBufferDesc = {};
-		indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-		indexBufferDesc.ByteWidth = static_cast<UINT>(indices.size() * sizeof(unsigned int));
-		indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-
-		D3D11_SUBRESOURCE_DATA indexInitData = {};
-		indexInitData.pSysMem = indices.data();
-		HRESULT hr = dxDevice.getDevice()->CreateBuffer(&indexBufferDesc, &indexInitData, &indexBuffer);
+		hr = dxDevice.getDevice()->CreateDepthStencilView(depthStencilBuffer.Get(), &depthStencilViewDesc, &depthStencilView);
 		assert(SUCCEEDED(hr));
 	}
-
-	size_t numIndices = indices.size();
-	ComPtr<ID3D11Buffer> vertexBuffer;
-	size_t numVert = vBuf.size();
-	{
-		D3D11_BUFFER_DESC vertexBufferDesc = {};
-		vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-		vertexBufferDesc.ByteWidth = static_cast<UINT>(numVert * sizeof(Vertex));
-		vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-		vertexBufferDesc.CPUAccessFlags = 0;
-		vertexBufferDesc.MiscFlags = 0;
-		vertexBufferDesc.StructureByteStride = 0;
-
-		D3D11_SUBRESOURCE_DATA vertexInitData;
-		vertexInitData.pSysMem = &vBuf[0];
-		vertexInitData.SysMemPitch = 0;
-		vertexInitData.SysMemSlicePitch = 0;
-		HRESULT hr = dxDevice.getDevice()->CreateBuffer(&vertexBufferDesc, &vertexInitData, &vertexBuffer);
-		assert(SUCCEEDED(hr));
-	}
-
-	D3D11_INPUT_ELEMENT_DESC inputDesc[] =
-	{
-		{"POS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"TEX", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-	};
 
 	ComPtr<ID3D11VertexShader> vertexShader;
 	ComPtr<ID3D11PixelShader> pixelShader;
 	ComPtr<ID3D11InputLayout> inputLayout;
 
 	dxCompiler.CompileFromFile(L"shaders/main.hlsl", nullptr, nullptr, "VS", "vs_5_0", 0, 0, &vertexShader);
-
 	{
-		HRESULT hr = dxDevice.getDevice()->CreateInputLayout(inputDesc, ARRAYSIZE(inputDesc), dxCompiler.getVsBlob()->GetBufferPointer(), dxCompiler.getVsBlob()->GetBufferSize(), &inputLayout);
+		HRESULT hr = dxDevice.getDevice()->CreateInputLayout(genericInputLayoutDesc, ARRAYSIZE(genericInputLayoutDesc), dxCompiler.getVsBlob()->GetBufferPointer(), dxCompiler.getVsBlob()->GetBufferSize(), &inputLayout);
 		assert(SUCCEEDED(hr));
 	}
 
-	dxCompiler.CompileFromFile(L"shaders/main.hlsl", nullptr, nullptr, "PS", "vs_5_0", 0, 0, &pixelShader);
+	dxCompiler.CompileFromFile(L"shaders/main.hlsl", nullptr, nullptr, "PS", "ps_5_0", 0, 0, &pixelShader);
 
 	ComPtr<ID3D11Buffer> constantbuffer;
 
-	struct ConstantBufferData
+	struct alignas(16) ConstantBufferData
 	{
-		XMMATRIX modelViewProjection;
+		glm::mat4 modelViewProjection;
+		glm::mat4 inverseTransposedModel;
 	};
 
+	glm::vec3 cameraPosition(0.0f, 0.0f, -5.0f);
+	Camera camera(cameraPosition);
 	// Initialize camera matrices
-	XMVECTOR cameraPosition = XMVectorSet(0.0f, 0.0f, -2.0f, 1.0f);
-	XMVECTOR cameraTarget = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
-	XMVECTOR cameraUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
-	XMMATRIX cameraView = XMMatrixLookAtLH(cameraPosition, cameraTarget, cameraUp);
-	XMMATRIX cameraProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, (float)window.width / (float)window.height, 0.1f, 100.0f);
-	XMMATRIX model = XMMatrixIdentity();
-	model = XMMatrixTranslation(0.0f, 0.0f, 10.0f);
+	glm::mat4 view = camera.getViewMatrix();
+	glm::mat4 projection = glm::perspectiveLH(glm::radians(camera.zoom), (float)window.width / (float)window.height, 0.1f, 100.0f);
+	glm::mat4 model = glm::mat4(1.0f);
 
-	XMMATRIX modelViewProjection = XMMatrixMultiply(XMMatrixMultiply(model, cameraView), cameraProjection);
+	glm::mat4 mvp = projection * view * model;
 
 	ConstantBufferData cbdata;
-	cbdata.modelViewProjection = XMMatrixTranspose(modelViewProjection);
-
+	cbdata.modelViewProjection = glm::transpose(mvp);
+	cbdata.inverseTransposedModel = glm::transpose(glm::inverse(model));
 	{
 		D3D11_BUFFER_DESC constantBufferDesc;
 		constantBufferDesc.ByteWidth = sizeof(ConstantBufferData);
@@ -203,6 +156,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 
 	GLTFModel gltfModel(std::filesystem::absolute("..\\..\\res\\Knight.glb").string(), dxDevice.getDevice());
 
+	std::cout << "Number of primitives loaded: " << SceneManager::getPrimitiveCount() << std::endl;
+
 	MSG message = {};
 	while (message.message != WM_QUIT)
 	{
@@ -215,6 +170,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 				{
 					renderTargetView.Reset();
 					backBuffer.Reset();
+					depthStencilView.Reset();
+					depthStencilBuffer.Reset();
 
 					HRESULT hr = dxDevice.getSwapChain()->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
 					assert(SUCCEEDED(hr));
@@ -225,19 +182,42 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 					hr = dxDevice.getDevice()->CreateRenderTargetView(backBuffer.Get(), nullptr, &renderTargetView);
 					assert(SUCCEEDED(hr));
 
+					D3D11_TEXTURE2D_DESC depthBufferDesc = {};
+					depthBufferDesc.Width = window.width;
+					depthBufferDesc.Height = window.height;
+					depthBufferDesc.MipLevels = 1;
+					depthBufferDesc.ArraySize = 1;
+					depthBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+					depthBufferDesc.SampleDesc.Count = 1;
+					depthBufferDesc.SampleDesc.Quality = 0;
+					depthBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+					depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+
+					hr = dxDevice.getDevice()->CreateTexture2D(&depthBufferDesc, nullptr, &depthStencilBuffer);
+					assert(SUCCEEDED(hr));
+
+					D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc = {};
+					depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+					depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+					depthStencilViewDesc.Texture2D.MipSlice = 0;
+
+					hr = dxDevice.getDevice()->CreateDepthStencilView(depthStencilBuffer.Get(), &depthStencilViewDesc, &depthStencilView);
+					assert(SUCCEEDED(hr));
+
 					viewport.Width = static_cast<float>(window.width);
 					viewport.Height = static_cast<float>(window.height);
 					dxDevice.getContext()->RSSetViewports(1, &viewport);
 
-					cameraProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, (float)window.width / (float)window.height, 0.1f, 100.0f);
-					modelViewProjection = XMMatrixMultiply(XMMatrixMultiply(model, cameraView), cameraProjection);
+					projection = glm::perspective(glm::radians(camera.zoom), (float)window.width / (float)window.height, 0.1f, 100.0f);
+
+					glm::mat4 mvp = projection * view * model;
 
 					D3D11_MAPPED_SUBRESOURCE mappedResource;
 					hr = dxDevice.getContext()->Map(constantbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 					if (SUCCEEDED(hr))
 					{
 						ConstantBufferData* cbData = static_cast<ConstantBufferData*>(mappedResource.pData);
-						cbData->modelViewProjection = XMMatrixTranspose(modelViewProjection);
+						cbData->modelViewProjection = glm::transpose(mvp);
 						dxDevice.getContext()->Unmap(constantbuffer.Get(), 0);
 					}
 				}
@@ -253,22 +233,24 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 
 		static float rotationY = 0.0f;
 		rotationY += static_cast<float>(deltaTime.count());
-		model = XMMatrixRotationRollPitchYaw(0, rotationY, 0);
-		modelViewProjection = XMMatrixMultiply(XMMatrixMultiply(model, cameraView), cameraProjection);
+		model = glm::rotate(glm::mat4(1.0f), rotationY, glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::mat4 mvp = projection * view * model;
 		D3D11_MAPPED_SUBRESOURCE mappedResource;
 		HRESULT hr = dxDevice.getContext()->Map(constantbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 		if (SUCCEEDED(hr))
 		{
 			ConstantBufferData* cbData = static_cast<ConstantBufferData*>(mappedResource.pData);
-			cbData->modelViewProjection = XMMatrixTranspose(modelViewProjection);
+			cbData->modelViewProjection = glm::transpose(mvp);
+			cbData->inverseTransposedModel = glm::transpose(glm::inverse(model));
 			dxDevice.getContext()->Unmap(constantbuffer.Get(), 0);
 		}
 
 		dxDevice.getContext()->RSSetState(rasterizerState.Get());
 		dxDevice.getContext()->OMSetDepthStencilState(depthStencilState.Get(), 0);
-		dxDevice.getContext()->OMSetRenderTargets(1, renderTargetView.GetAddressOf(), nullptr);
+		dxDevice.getContext()->OMSetRenderTargets(1, renderTargetView.GetAddressOf(), depthStencilView.Get());
 		float clearColor[4] = { 0.4f, 0.6f, 0.9f, 1.0f }; // blue
 		dxDevice.getContext()->ClearRenderTargetView(renderTargetView.Get(), clearColor);
+		dxDevice.getContext()->ClearDepthStencilView(depthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 		dxDevice.getContext()->VSSetShader(vertexShader.Get(), nullptr, 0);
 		dxDevice.getContext()->VSSetConstantBuffers(0, 1, constantbuffer.GetAddressOf());
@@ -278,13 +260,15 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 		dxDevice.getContext()->IASetInputLayout(inputLayout.Get());
 		dxDevice.getContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-		UINT stride = sizeof(Vertex);
+		UINT stride = sizeof(InterleavedData);
 		UINT offset = 0;
+		for (const auto& prim : SceneManager::getPrimitives())
+		{
+			dxDevice.getContext()->IASetVertexBuffers(0, 1, prim.getVertexBuffer().GetAddressOf(), &stride, &offset);
+			dxDevice.getContext()->IASetIndexBuffer(prim.getIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
-		dxDevice.getContext()->IASetVertexBuffers(0, 1, vertexBuffer.GetAddressOf(), &stride, &offset);
-		dxDevice.getContext()->IASetIndexBuffer(indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
-
-		dxDevice.getContext()->DrawIndexed(static_cast<UINT>(numIndices), 0, 0);
+			dxDevice.getContext()->DrawIndexed(static_cast<UINT>(prim.getIndexData().size()), 0, 0);
+		}
 
 		dxDevice.getSwapChain()->Present(1, 0);
 	}

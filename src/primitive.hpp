@@ -19,6 +19,7 @@ public:
 	void setVertexData(std::vector<InterleavedData>&& vertexData);
 	void setIndexData(std::vector<uint32_t>&& indexData);
 
+
 	struct Triangle
 	{
 		InterleavedData v0, v1, v2;
@@ -27,6 +28,8 @@ public:
 	std::vector<Triangle> getTriangles() const;
 	const std::vector<InterleavedData>& getVertexData() const { return m_vertexData; }
 	const std::vector<uint32_t>& getIndexData() const { return m_indexData; }
+	const ComPtr<ID3D11Buffer>& getIndexBuffer() const { return m_indexBuffer; };
+	const ComPtr<ID3D11Buffer>& getVertexBuffer() const { return m_vertexBuffer; };
 
 private:
 	std::vector<InterleavedData> m_vertexData;

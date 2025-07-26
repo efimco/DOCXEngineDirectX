@@ -37,6 +37,7 @@ void Primitive::setIndexData(std::vector<uint32_t>&& indexData)
 	assert(SUCCEEDED(hr));
 }
 
+
 std::vector<Primitive::Triangle> Primitive::getTriangles() const
 {
 	std::vector<Primitive::Triangle> triangles;

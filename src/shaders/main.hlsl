@@ -1,31 +1,33 @@
+cbuffer ConstantBuffer : register(b0)
+{
+	float4x4 modelViewProjection;
+	float4x4 inverseTransposedModel;
+};
+
 struct VertexInputType
 {
-	float3 position : POS;
-	float2 texCoord : TEX;
+	float3 position : POSITION;
+	float2 texCoord : TEXCOORD;
+	float3 normal : NORMAL;
 };
 
 struct PixelInputType
 {
 	float4 position : SV_POSITION;
 	float2 texCoord : TEXCOORD;
-};
-
-cbuffer ConstantBuffer : register(b0)
-{
-	float4x4 modelViewProjection;
+	float3 normal : NORMAL;
 };
 
 PixelInputType VS(VertexInputType input)
 {
 	PixelInputType output;
-	float4 worldPosition = mul(float4(input.position, 1.0f), modelViewProjection);
-	output.position = worldPosition;
+	output.position = mul(float4(input.position, 1.0f), modelViewProjection);
 	output.texCoord = input.texCoord;
+	output.normal = normalize(mul((float3x3)inverseTransposedModel, input.normal));
 	return output;
 }
 
 float4 PS(PixelInputType input) : SV_TARGET
 {
-
-	return float4(input.texCoord, 0.0f, 1.0f); // Assuming texCoord is defined in the context
+	return float4(normalize(input.normal) * 0.5f + 0.5f, 1.0f);
 }

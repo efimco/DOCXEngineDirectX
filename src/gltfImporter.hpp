@@ -19,16 +19,11 @@ public:
 private:
 	tinygltf::Model readGlb(const std::string& path);
 	void processGlb(const tinygltf::Model& model);
-	void processPosAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive);
-	void processTexCoordAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive);
-	void processIndexAttrib(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive);
-	// void processNormalsAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive);
+	void processPosAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<Vertex>& verticies);
+	void processTexCoordAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<TexCoords>& texCoords);
+	void processIndexAttrib(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<uint32_t>& indicies);
+	void processNormalsAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive, std::vector<Normals>& normals);
 	// void processTangentAttribute(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const tinygltf::Primitive& primitive);
 	ComPtr<ID3D11Device>& m_device;
-	std::vector<Vertex> m_posBuffer;
-	std::vector<TexCoords> m_texCoordsBuffer;
-	std::vector<Normals> m_normalBuffer;
-	std::vector<Tangents> m_tangentBuffer;
-	std::vector<uint32_t> m_indices;
 
 };
