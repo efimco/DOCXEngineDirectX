@@ -25,6 +25,8 @@
 #include "passes/rayTracePass.hpp"
 #include "passes/wordSpaceUIPass.hpp"
 #include "passes/bakerPass.hpp"
+#include "passes/GTAOPass.hpp"
+
 
 #include "utility/rdocHelpers.hpp"
 
@@ -86,6 +88,7 @@ Renderer::Renderer(const HWND& hwnd)
 	m_rayTracePass = std::make_unique<RayTracePass>(m_dxDevice->getDevice(), m_dxDevice->getContext());
 	m_bvhDebugPass = std::make_unique<BVHDebugPass>(m_dxDevice->getDevice(), m_dxDevice->getContext());
 	m_bakerPass = std::make_unique<BakerPass>(m_dxDevice->getDevice(), m_dxDevice->getContext(), m_scene.get());
+	m_gtaoPass = std::make_unique<GTAOPass>(m_dxDevice->getDevice(), m_dxDevice->getContext());
 
 	m_uiManager = std::make_unique<UIManager>(m_dxDevice->getDevice(), m_dxDevice->getContext(), hwnd);
 	resize();
@@ -114,10 +117,11 @@ void Renderer::draw()
 		m_deferredPass->createOrResize();
 		m_fsquad->createOrResize();
 		m_cubeMapPass->createOrResize();
+		m_worldSpaceUIPass->createOrResize();
+		m_gtaoPass->createOrResize();
 #if DRAW_DEBUG_BVH
 		m_bvhDebugPass->createOrResize();
 #endif
-		m_worldSpaceUIPass->createOrResize();
 		AppConfig::needsResize = false;
 	}
 
@@ -157,13 +161,24 @@ void Renderer::draw()
 		m_scene->getActiveCamera()->transform.position,
 		m_scene.get(),
 		m_zPrePass->getDSV());
+	m_gtaoPass->draw(m_gBuffer->getViewNormalSRV(),
+		m_gBuffer->getViewPositionSRV(),
+		m_projection,
+		m_view,
+		glm::vec2(m_scene->getActiveCamera()->nearPlane, m_scene->getActiveCamera()->farPlane));
 	m_previewGenerator->generatePreview(m_scene.get());
 	m_cubeMapPass->draw(m_view, m_projection);
 	m_worldSpaceUIPass->draw(m_view, m_projection, m_scene.get(), m_gBuffer->getObjectIDRTV());
-	m_deferredPass->draw(m_view, m_projection, m_scene->getActiveCamera()->transform.position, m_scene.get(),
-		m_gBuffer->getGBufferTextures(), m_zPrePass->getDepthSRV(), m_cubeMapPass->getBackgroundSRV(),
-		m_cubeMapPass->getIrradianceSRV(), m_cubeMapPass->getPrefilteredSRV(),
-		m_cubeMapPass->getBRDFLutSRV(), m_worldSpaceUIPass->getSRV());
+	m_deferredPass->draw(m_view, m_projection, m_scene->getActiveCamera()->transform.position,
+		m_scene.get(),
+		m_gBuffer->getGBufferTextures(),
+		m_zPrePass->getDepthSRV(),
+		m_cubeMapPass->getBackgroundSRV(),
+		m_cubeMapPass->getIrradianceSRV(),
+		m_cubeMapPass->getPrefilteredSRV(),
+		m_cubeMapPass->getBRDFLutSRV(),
+		m_worldSpaceUIPass->getSRV(),
+		m_gtaoPass->getAOResultSRV());
 
 #if DRAW_DEBUG_BVH
 	m_bvhDebugPass->draw(m_scene.get(), m_view, m_projection);

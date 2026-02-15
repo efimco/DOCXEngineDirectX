@@ -8,7 +8,9 @@
 
 #include <glm/glm.hpp>
 #include "imgui.h"
+
 #include "rtvCollector.hpp"
+#include "passes/basePass.hpp"
 
 class Scene;
 class SceneNode;
@@ -50,7 +52,7 @@ struct FileDialogResult
 	operator bool() const { return !isEmpty(); }
 };
 
-class UIManager
+class UIManager : public BasePass
 {
 public:
 	explicit UIManager(

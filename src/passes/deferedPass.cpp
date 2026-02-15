@@ -9,8 +9,8 @@
 #include "scene.hpp"
 #include "shaderManager.hpp"
 
-static constexpr UINT COMPUTE_THREAD_GROUP_SIZE = 16;
-static constexpr UINT MAX_LIGHTS = 100;
+static constexpr uint32_t COMPUTE_THREAD_GROUP_SIZE = 16;
+static constexpr uint32_t MAX_LIGHTS = 100;
 
 struct alignas(16) DeferredConstantBuffer
 {
@@ -62,7 +62,8 @@ void DeferredPass::draw(const glm::mat4& view,
 						ComPtr<ID3D11ShaderResourceView> irradianceSRV,
 						ComPtr<ID3D11ShaderResourceView> prefilteredSRV,
 						ComPtr<ID3D11ShaderResourceView> brdfLutSRV,
-						ComPtr<ID3D11ShaderResourceView> worldSpaceUISRV)
+						ComPtr<ID3D11ShaderResourceView> worldSpaceUISRV,
+						ComPtr<ID3D11ShaderResourceView> GTAOSRV)
 {
 	beginDebugEvent(L"Deffered Pass");
 	if (scene->areLightsDirty())
@@ -101,8 +102,9 @@ void DeferredPass::draw(const glm::mat4& view,
 										irradianceSRV.Get(),
 										prefilteredSRV.Get(),
 										brdfLutSRV.Get(),
-										worldSpaceUISRV.Get()};
-	m_context->CSSetShaderResources(0, 12, srvs);
+										worldSpaceUISRV.Get(),
+										GTAOSRV.Get()};
+	m_context->CSSetShaderResources(0, 13, srvs);
 	m_context->CSSetSamplers(0, 1, m_samplerState.GetAddressOf());
 	m_context->CSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
 
@@ -111,9 +113,9 @@ void DeferredPass::draw(const glm::mat4& view,
 	m_context->CSSetUnorderedAccessViews(0, 1, uavs, nullptr);
 
 	// Dispatch compute shader
-	UINT dispatchX = static_cast<UINT>(
+	uint32_t dispatchX = static_cast<uint32_t>(
 		std::ceil((AppConfig::viewportWidth + COMPUTE_THREAD_GROUP_SIZE - 1) / COMPUTE_THREAD_GROUP_SIZE));
-	UINT dispatchY = static_cast<UINT>(
+	uint32_t dispatchY = static_cast<uint32_t>(
 		std::ceil((AppConfig::viewportHeight + COMPUTE_THREAD_GROUP_SIZE - 1) / COMPUTE_THREAD_GROUP_SIZE));
 	if (dispatchX == 0)
 		dispatchX = 1;

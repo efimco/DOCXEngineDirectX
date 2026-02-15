@@ -27,8 +27,10 @@ enum class SamplerPreset
 {
 	LinearWrap,		 // Linear filter, Wrap
 	LinearClamp,	 // Linear filter, Clamp
+	PointWrap,		 // Point filter, Wrap
+	PointClamp,		 // Point filter, Clamp
 	AnisotropicWrap, // Anisotropic filter, Wrap
-	PointClamp		 // Point filter, Clamp
+
 };
 
 enum class BlendPreset
@@ -127,7 +129,8 @@ protected:
 		UINT arraySize = 1,
 		D3D11_USAGE usage = D3D11_USAGE_DEFAULT,
 		UINT cpuAccessFlags = 0,
-		UINT miscFlags = 0) const;
+		UINT miscFlags = 0,
+		const D3D11_SUBRESOURCE_DATA* initialData = nullptr) const;
 
 	// Buffer creation helpers
 	ComPtr<ID3D11Buffer> createConstantBuffer(UINT byteSize) const;

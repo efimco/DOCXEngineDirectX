@@ -50,6 +50,7 @@ TextureCube tIrradianceMap : register(t8);
 TextureCube tPrefilteredMap : register(t9);
 Texture2D tBRDFLUT : register(t10);
 Texture2D worldSpaceUITexture : register(t11);
+Texture2D gtaoTexture : register(t12);
 
 SamplerState linearSampler : register(s0);
 RWTexture2D<unorm float4> outColor : register(u0);
@@ -210,7 +211,7 @@ float3 applyPointLight(Light light, float3 V, float3 F0, GBuffer gbuffer)
 
 float3 outline(uint3 DTid, float objectID)
 {
-	if (objectID != selectedID ) // -1 because 0 is value for background but we want to select first object with ID 0
+	if (objectID != selectedID) // -1 because 0 is value for background but we want to select first object with ID 0
 		return float3(0.0, 0.0, 0.0);
 	float3 outlineColor = float3(0.65, 0.25, 0.0);
 	int thickness = 1;
@@ -308,6 +309,12 @@ void applyIBL(inout float3 color, GBuffer gbuffer)
 	color = (diffuseIBL + specularIBL) * IBLintensity;
 }
 
+void applyAO(inout float3 color, uint2 DTid)
+{
+	float ao = gtaoTexture.Load(int3(DTid, 0)).r;
+	color *= ao;
+}
+
 void drawBackground(uint2 DTid)
 {
 	float3 background = tBackground.Load(int3(DTid, 0)).xyz;
@@ -343,11 +350,12 @@ void CS(uint3 DTid : SV_DISPATCHTHREADID)
 	aces(finalColor.rgb);
 	applyDitheredNoise(DTid.xy, finalColor);
 
+	applyAO(finalColor.rgb, DTid.xy);
 	outColor[DTid.xy] = lerp(outColor[DTid.xy], finalColor, gbuffer.albedo.a);
 	outColor[DTid.xy] += float4(outline(DTid, gbuffer.objectID), 0.0);
 	[branch]
-	if (drawWSUI == 1)
-	{
-		drawWorldSpaceUI(DTid.xy);
-	}
+		if (drawWSUI == 1)
+		{
+			drawWorldSpaceUI(DTid.xy);
+		}
 }

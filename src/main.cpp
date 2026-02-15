@@ -1,7 +1,6 @@
 #ifndef UNICODE
 #define UNICODE
 #endif
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
 #include <windows.h>
 #include "renderer.hpp"

@@ -25,6 +25,7 @@ class PreviewGenerator;
 class RayTracePass;
 class BVHDebugPass;
 class BakerPass;
+class GTAOPass;
 
 using namespace Microsoft::WRL;
 
@@ -73,6 +74,7 @@ private:
 	std::unique_ptr<RayTracePass> m_rayTracePass;
 	std::unique_ptr<BVHDebugPass> m_bvhDebugPass;
 	std::unique_ptr<BakerPass> m_bakerPass;
+	std::unique_ptr<GTAOPass> m_gtaoPass;
 
 	RENDERDOC_API_1_1_2* m_rdocAPI = nullptr;
 };

@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <wrl/client.h>
 
-using Microsoft::WRL::ComPtr;
+using namespace Microsoft::WRL;
 
 class RTVCollector
 {

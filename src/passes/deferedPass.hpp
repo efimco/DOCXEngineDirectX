@@ -33,7 +33,8 @@ public:
 			  ComPtr<ID3D11ShaderResourceView> irradianceSRV,
 			  ComPtr<ID3D11ShaderResourceView> prefilteredSRV,
 			  ComPtr<ID3D11ShaderResourceView> brdfLutSRV,
-			  ComPtr<ID3D11ShaderResourceView> worldSpaceUISRV);
+			  ComPtr<ID3D11ShaderResourceView> worldSpaceUISRV,
+			  ComPtr<ID3D11ShaderResourceView> GTAOSRV);
 
 	ComPtr<ID3D11ShaderResourceView> getFinalSRV() const;
 	ComPtr<ID3D11RenderTargetView> getFinalRTV() const;
@@ -49,7 +50,7 @@ private:
 
 	ComPtr<ID3D11Buffer> m_lightsBuffer;
 	ComPtr<ID3D11ShaderResourceView> m_lightsSRV;
-
+	ComPtr<ID3D11ShaderResourceView> m_GTAOSRV;
 
 	ComPtr<ID3D11Buffer> m_constantBuffer;
 };

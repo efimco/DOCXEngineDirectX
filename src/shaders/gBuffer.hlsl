@@ -5,6 +5,7 @@ cbuffer ConstantBuffer : register(b0)
 	float4x4 modelViewProjection;
 	float4x4 inverseTransposedModel;
 	float4x4 model;
+	float4x4 view;
 	float3 cameraPosition;
 	float objectID;
 	float4 albedoColor;
@@ -36,8 +37,10 @@ struct VertexOutput
 	float4 position : SV_POSITION;
 	float2 texCoord : TEXCOORD;
 	float3 normal : NORMAL;
+	float3 viewNormal : NORMAL1;
 	float3 tangent : TANGENT0;
-	float4 fragPos : NORMAL1;
+	float4 fragPos : NORMAL2;
+	float4 viewSpaceFragPos : NORMAL3;
 };
 
 
@@ -46,8 +49,10 @@ struct PSOutput
 	float4 albedo : SV_TARGET0;
 	float2 metallicRoughness : SV_TARGET1;
 	float4 normal : SV_TARGET2;
-	float4 fragPos : SV_TARGET3;
-	float objectID : SV_TARGET4;
+	float4 viewSpaceNormal : SV_TARGET3;
+	float4 fragPos : SV_TARGET4;
+	float4 viewSpaceFragPos : SV_TARGET5;
+	float objectID : SV_TARGET6;
 };
 
 VertexOutput VS(VertexInput input)
@@ -55,6 +60,7 @@ VertexOutput VS(VertexInput input)
 	VertexOutput output;
 	output.position = mul(float4(input.position, 1.0f), modelViewProjection);
 	output.fragPos = mul(float4(input.position, 1.0f), model);
+	output.viewSpaceFragPos = mul(output.fragPos, view);
 	output.texCoord = input.texCoord;
 	output.normal = normalize(mul((float3x3)inverseTransposedModel, input.normal));
 	output.tangent = normalize(mul((float3x3)inverseTransposedModel, input.tangent));
@@ -106,7 +112,8 @@ PSOutput PS(VertexOutput input)
 	}
 
 	output.fragPos = float4(input.fragPos.xyz, 1.0f);
-	float3 worldNormal = getNormalFromMap(input, hasNormalTexture);
+	output.viewSpaceFragPos = float4(input.viewSpaceFragPos.xyz, 1.0f);
+	float3 tangentNormal = getNormalFromMap(input, hasNormalTexture);
 	float3 V = normalize(cameraPosition - input.fragPos.xyz);
 	float3 selectionColor = float3(1.9, 0.5, 0.0);
 	if (output.albedo.a < 0.1f)
@@ -129,7 +136,9 @@ PSOutput PS(VertexOutput input)
 	}
 
 	// Encode normal from [-1,1] to [0,1] for storage in UNORM render target
-	output.normal = float4(worldNormal * 0.5f + 0.5f, 1.0f);
+	output.normal = float4(tangentNormal * 0.5f + 0.5f, 1.0f);
+	float3 viewNormal = normalize(mul(tangentNormal, (float3x3)(view)));
+	output.viewSpaceNormal = float4(viewNormal * 0.5f + 0.5f, 1.0f);
 
 
 	output.objectID = objectID;

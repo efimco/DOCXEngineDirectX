@@ -32,6 +32,10 @@ namespace AppConfig
 	inline int minBVHDepth = 0;
 	inline bool showLeafsOnly = false;
 
+	inline float aoRadius = 0.5f;
+	inline float aoIntensity = 2.0f;
+	inline float aoBias = 0.025f;
+
 	inline float getAspectRatio()
 	{
 		return static_cast<float>(viewportWidth) / static_cast<float>(viewportHeight);

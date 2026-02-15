@@ -27,6 +27,7 @@ struct alignas(16) ConstantBufferData
 	glm::mat4 modelViewProjection;
 	glm::mat4 inverseTransposedModel;
 	glm::mat4 model;
+	glm::mat4 view;
 	glm::vec3 cameraPosition;
 	float objectID;
 	glm::vec4 albedoColor;
@@ -77,7 +78,7 @@ void GBuffer::draw(const glm::mat4& view,
 	m_context->RSSetState(m_rasterizerState.Get());
 
 	m_context->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
-	m_context->OMSetRenderTargets(5, m_rtvs, dsv.Get());
+	m_context->OMSetRenderTargets(7, m_rtvs, dsv.Get());
 
 	for (const auto rtv : m_rtvs)
 	{
@@ -108,7 +109,7 @@ void GBuffer::draw(const glm::mat4& view,
 		m_context->DrawIndexed(static_cast<UINT>(prim->getIndexData().size()), 0, 0);
 		unbindShaderResources(0, 3);
 	}
-	unbindRenderTargets(5);
+	unbindRenderTargets(7);
 	endDebugEvent();
 }
 
@@ -128,6 +129,7 @@ void GBuffer::update(const glm::mat4& view,
 		cbData->modelViewProjection = glm::transpose(mvp);
 		cbData->inverseTransposedModel = glm::transpose(glm::inverse(prim->getWorldMatrix()));
 		cbData->model = glm::transpose(prim->getWorldMatrix());
+		cbData->view = glm::transpose(view);
 		cbData->cameraPosition = cameraPosition;
 		cbData->objectID = objectID;
 		if (prim->material)
@@ -152,16 +154,19 @@ void GBuffer::createOrResize()
 		t_albedo.Reset();
 		t_metallicRoughness.Reset();
 		t_normal.Reset();
+		t_viewNormal.Reset();
 		t_position.Reset();
 
 		rtv_albedo.Reset();
 		rtv_metallicRoughness.Reset();
 		rtv_normal.Reset();
+		rtv_viewNormal.Reset();
 		rtv_position.Reset();
 
 		srv_albedo.Reset();
 		srv_metallicRoughness.Reset();
 		srv_normal.Reset();
+		srv_viewNormal.Reset();
 		srv_position.Reset();
 	}
 
@@ -171,22 +176,30 @@ void GBuffer::createOrResize()
 	rtv_albedo = createRenderTargetView(t_albedo.Get(), RTVPreset::Texture2D);
 
 	// metallicRoughness
-
 	t_metallicRoughness = createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight, DXGI_FORMAT_R16G16_UNORM);
 	srv_metallicRoughness = createShaderResourceView(t_metallicRoughness.Get(), SRVPreset::Texture2D);
 	rtv_metallicRoughness = createRenderTargetView(t_metallicRoughness.Get(), RTVPreset::Texture2D);
 
 	// normal
-
 	t_normal = createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	srv_normal = createShaderResourceView(t_normal.Get(), SRVPreset::Texture2D);
 	rtv_normal = createRenderTargetView(t_normal.Get(), RTVPreset::Texture2D);
 
-	// position
+	// view Normal
 
+	t_viewNormal = createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	srv_viewNormal = createShaderResourceView(t_viewNormal.Get(), SRVPreset::Texture2D);
+	rtv_viewNormal = createRenderTargetView(t_viewNormal.Get(), RTVPreset::Texture2D);
+
+	// position
 	t_position = createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	srv_position = createShaderResourceView(t_position.Get(), SRVPreset::Texture2D);
 	rtv_position = createRenderTargetView(t_position.Get(), RTVPreset::Texture2D);
+
+	// position
+	t_viewPosition = createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	srv_viewPosition = createShaderResourceView(t_viewPosition.Get(), SRVPreset::Texture2D);
+	rtv_viewPosition = createRenderTargetView(t_viewPosition.Get(), RTVPreset::Texture2D);
 
 	// objectID
 	t_objectID = createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight, DXGI_FORMAT_R32_FLOAT);
@@ -197,13 +210,17 @@ void GBuffer::createOrResize()
 	m_rtvs[0] = rtv_albedo.Get();
 	m_rtvs[1] = rtv_metallicRoughness.Get();
 	m_rtvs[2] = rtv_normal.Get();
-	m_rtvs[3] = rtv_position.Get();
-	m_rtvs[4] = rtv_objectID.Get();
+	m_rtvs[3] = rtv_viewNormal.Get();
+	m_rtvs[4] = rtv_position.Get();
+	m_rtvs[5] = rtv_viewPosition.Get();
+	m_rtvs[6] = rtv_objectID.Get();
 
 	m_rtvCollector->addRTV("GBuffer::Albedo", srv_albedo.Get());
 	m_rtvCollector->addRTV("GBuffer::MetallicRoughness", srv_metallicRoughness.Get());
 	m_rtvCollector->addRTV("GBuffer::Normal", srv_normal.Get());
+	m_rtvCollector->addRTV("GBuffer::ViewNormal", srv_viewNormal.Get());
 	m_rtvCollector->addRTV("GBuffer::Position", srv_position.Get());
+	m_rtvCollector->addRTV("GBuffer::ViewPosition", srv_viewPosition.Get());
 	m_rtvCollector->addRTV("GBuffer::ObjectID", srv_objectID.Get());
 }
 
@@ -213,6 +230,7 @@ GBufferTextures GBuffer::getGBufferTextures() const
 	gbufferTextures.albedoSRV = srv_albedo;
 	gbufferTextures.metallicRoughnessSRV = srv_metallicRoughness;
 	gbufferTextures.normalSRV = srv_normal;
+	gbufferTextures.viewNormalSRV = srv_viewNormal;
 	gbufferTextures.positionSRV = srv_position;
 	gbufferTextures.objectIDSRV = srv_objectID;
 	return gbufferTextures;
@@ -233,9 +251,19 @@ ComPtr<ID3D11ShaderResourceView> GBuffer::getNormalSRV() const
 	return srv_normal;
 }
 
+ComPtr<ID3D11ShaderResourceView> GBuffer::getViewNormalSRV() const
+{
+	return srv_viewNormal;
+}
+
 ComPtr<ID3D11ShaderResourceView> GBuffer::getPositionSRV() const
 {
 	return srv_position;
+}
+
+ComPtr<ID3D11ShaderResourceView> GBuffer::getViewPositionSRV() const
+{
+	return srv_viewPosition;
 }
 
 ComPtr<ID3D11ShaderResourceView> GBuffer::getObjectIDSRV() const

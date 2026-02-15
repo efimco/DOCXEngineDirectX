@@ -28,6 +28,7 @@
 #include "primitiveData.hpp"
 #include "scene.hpp"
 #include "texture.hpp"
+#include "shaderManager.hpp"
 
 #include "commands/commandManager.hpp"
 #include "commands/nodeCommand.hpp"
@@ -64,7 +65,8 @@ UIManager::UIManager(
 	: m_commandManager(std::make_unique<CommandManager>())
 	, m_hwnd(hwnd)
 	, m_mousePos{}
-	, m_scene(nullptr)
+	, m_scene(nullptr),
+	BasePass(device, deviceContext)
 {
 	m_device = device;
 	m_context = deviceContext;
@@ -147,6 +149,7 @@ void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv,
 	const glm::mat4& view,
 	const glm::mat4& projection)
 {
+	beginDebugEvent(L"UIManager::draw");
 	m_view = view;
 	m_projection = projection;
 
@@ -154,7 +157,6 @@ void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv,
 	// Always check window validity before starting a new frame
 	if (!IsWindow(m_hwnd) || !m_scene)
 	{
-
 		return;
 	}
 
@@ -189,6 +191,7 @@ void UIManager::draw(const ComPtr<ID3D11ShaderResourceView>& srv,
 		ImGui::UpdatePlatformWindows();
 		ImGui::RenderPlatformWindowsDefault();
 	}
+	endDebugEvent();
 }
 
 uint32_t* UIManager::getMousePos()
@@ -245,6 +248,11 @@ void UIManager::showSceneSettings() const
 
 		alignedDragFloat("Blur Amount", &AppConfig::blurAmount, 0.02f, 0.0f, 1.0f);
 	}
+
+	ImGui::Separator();
+	ImGui::DragFloat("AO Radius", &AppConfig::aoRadius, 0.01f, 0.0f, 10.0f);
+	ImGui::DragFloat("AO Intensity", &AppConfig::aoIntensity, 0.1f, 0.0f, 10.0f);
+	ImGui::DragFloat("AO Bias", &AppConfig::aoBias, 0.001f, 0.0f, 1.0f);
 
 #ifdef _DEBUG
 	ImGui::Separator();

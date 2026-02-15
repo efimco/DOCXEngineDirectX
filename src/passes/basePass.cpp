@@ -94,10 +94,12 @@ ComPtr<ID3D11SamplerState> BasePass::createSamplerState(const SamplerPreset pres
 		return createSamplerState(D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_WRAP);
 	case SamplerPreset::LinearClamp:
 		return createSamplerState(D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP);
-	case SamplerPreset::AnisotropicWrap:
-		return createSamplerState(D3D11_FILTER_ANISOTROPIC, D3D11_TEXTURE_ADDRESS_WRAP);
+	case SamplerPreset::PointWrap:
+		return createSamplerState(D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_WRAP);
 	case SamplerPreset::PointClamp:
 		return createSamplerState(D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_CLAMP);
+	case SamplerPreset::AnisotropicWrap:
+		return createSamplerState(D3D11_FILTER_ANISOTROPIC, D3D11_TEXTURE_ADDRESS_WRAP);
 	default:
 		return createSamplerState(D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_WRAP);
 	}
@@ -189,7 +191,8 @@ ComPtr<ID3D11Texture2D> BasePass::createTexture2D(UINT width,
 	UINT arraySize,
 	D3D11_USAGE usage,
 	UINT cpuAccessFlags,
-	UINT miscFlags) const
+	UINT miscFlags,
+	const D3D11_SUBRESOURCE_DATA* initialData) const
 {
 	// Detect typeless depth formats and adjust bind flags accordingly
 	UINT finalBindFlags = bindFlags;
@@ -220,7 +223,7 @@ ComPtr<ID3D11Texture2D> BasePass::createTexture2D(UINT width,
 	desc.MiscFlags = miscFlags;
 
 	ComPtr<ID3D11Texture2D> texture;
-	HRESULT hr = m_device->CreateTexture2D(&desc, nullptr, &texture);
+	HRESULT hr = m_device->CreateTexture2D(&desc, initialData, &texture);
 	if (FAILED(hr))
 	{
 		std::cerr << "Failed to create Texture2D: " << hr << std::endl;

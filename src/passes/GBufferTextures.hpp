@@ -11,7 +11,9 @@ struct GBufferTextures
 	ComPtr<ID3D11ShaderResourceView> albedoSRV;
 	ComPtr<ID3D11ShaderResourceView> metallicRoughnessSRV;
 	ComPtr<ID3D11ShaderResourceView> normalSRV;
+	ComPtr<ID3D11ShaderResourceView> viewNormalSRV;
 	ComPtr<ID3D11ShaderResourceView> positionSRV;
+	ComPtr<ID3D11ShaderResourceView> viewPositionSRV;
 	ComPtr<ID3D11ShaderResourceView> objectIDSRV;
 
 };
