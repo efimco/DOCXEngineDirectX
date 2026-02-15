@@ -8,8 +8,8 @@
 
 static constexpr uint32_t COMPUTE_THREAD_GROUP_SIZE = 16;
 static constexpr uint32_t COMPUTE_THREAD_GROUP_SIZE_MONE = COMPUTE_THREAD_GROUP_SIZE - 1;
-static constexpr uint32_t MAX_SAMPLES = 32;
-static constexpr uint32_t NOISE_TEX_DIM = 4; // 4x4 = 16 texels for tiling noise
+static constexpr uint32_t MAX_SAMPLES = 64;
+static constexpr uint32_t NOISE_TEX_DIM = 8; // 4x4 = 16 texels for tiling noise
 
 
 struct alignas(16) GTAOConstantBuffer
@@ -22,6 +22,7 @@ struct alignas(16) GTAOConstantBuffer
 	float aoRadius;
 	float aoBias;
 	float aoIntensity;
+	uint32_t enableGTAO;
 };
 
 GTAOPass::GTAOPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context) : BasePass(device, context)
@@ -149,6 +150,7 @@ void GTAOPass::update(glm::mat4& projection, glm::mat4& view, glm::vec2 nearFarP
 		cbData->aoRadius = AppConfig::aoRadius;
 		cbData->aoBias = AppConfig::aoBias;
 		cbData->aoIntensity = AppConfig::aoIntensity;
+		cbData->enableGTAO = AppConfig::gtaoEnabled ? 1 : 0;
 		m_context->Unmap(m_constantBuffer.Get(), 0);
 	}
 }

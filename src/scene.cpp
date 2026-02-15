@@ -277,27 +277,40 @@ void Scene::checkTextureUpdates()
 {
 	for (auto& [name, texture] : m_textures)
 	{
-		if (texture->filepath.empty())
+		if (!texture || texture->filepath.empty())
 			continue;
 		bool alreadyPending = std::ranges::any_of(m_pendingTextureReloads,
 			[&name](const PendingTextureReload& p) { return p.name == name; });
+
 		if (alreadyPending)
 			continue;
 
-		auto ftime = std::filesystem::last_write_time(texture->filepath);
-		if (ftime != texture->lastModifiedTime)
+		try
 		{
+			if (!std::filesystem::exists(texture->filepath))
+				continue;
+			auto ftime = std::filesystem::last_write_time(texture->filepath);
+			if (ftime != texture->lastModifiedTime)
+			{
+				auto progress = std::make_shared<TextureLoadProgress>();
+				auto future = Texture::loadTextureAsync(texture->filepath, texture->device, progress);
+				m_pendingTextureReloads.push_back(PendingTextureReload{ name, std::move(future), progress });
 
-			auto progress = std::make_shared<TextureLoadProgress>();
-			auto future = Texture::loadTextureAsync(texture->filepath, texture->device, progress);
-			m_pendingTextureReloads.push_back(PendingTextureReload{ name, std::move(future), progress });
-
-			texture->lastModifiedTime = ftime;
+				texture->lastModifiedTime = ftime;
+			}
+		}
+		catch (const std::filesystem::filesystem_error&)
+		{
+			continue;
+		}
+		catch (const std::exception&)
+		{
+			continue;
 		}
 	}
 }
 
-void Scene::updateAsyncPendingTextureReloads()
+void Scene::updateAsyncPendingTextureReloads() noexcept
 {
 	for (auto it = m_pendingTextureReloads.begin(); it != m_pendingTextureReloads.end();)
 	{
@@ -651,7 +664,7 @@ void Scene::importModel(const std::string& filepath)
 	std::cout << "Started async import: " << filepath << std::endl;
 }
 
-void Scene::updateAsyncImport()
+void Scene::updateAsyncImport() noexcept
 {
 	if (m_isImporting)
 	{
@@ -683,7 +696,7 @@ void Scene::updateAsyncImport()
 	}
 }
 
-std::shared_ptr<ImportProgress> Scene::getImportProgress() const
+std::shared_ptr<ImportProgress> Scene::getImportProgress() const noexcept
 {
 	return m_importProgress;
 }

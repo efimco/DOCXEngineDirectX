@@ -32,9 +32,10 @@ namespace AppConfig
 	inline int minBVHDepth = 0;
 	inline bool showLeafsOnly = false;
 
-	inline float aoRadius = 0.5f;
-	inline float aoIntensity = 2.0f;
+	inline float aoRadius = 0.06f;
+	inline float aoIntensity = 1.7f;
 	inline float aoBias = 0.025f;
+	inline bool gtaoEnabled = true;
 
 	inline float getAspectRatio()
 	{

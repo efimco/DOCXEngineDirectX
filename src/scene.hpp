@@ -89,17 +89,17 @@ public:
 	void updateState();
 
 	void importModel(const std::string& filepath);
-	std::shared_ptr<ImportProgress> getImportProgress() const;
+	std::shared_ptr<ImportProgress> getImportProgress() const noexcept;
 
 	void saveScene(std::string_view filepath);
 	void loadScene(std::string_view filepath);
 	void clearScene();
 
 private:
-	void updateAsyncImport(); // called each frame
+	void updateAsyncImport() noexcept; // called each frame
 	void processPendingBakes();
 	void checkTextureUpdates();
-	void updateAsyncPendingTextureReloads();
+	void updateAsyncPendingTextureReloads() noexcept; 
 	void addLight(Light* light);
 	void addPrimitive(Primitive* primitive);
 	void addCamera(Camera* camera);

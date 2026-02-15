@@ -250,6 +250,7 @@ void UIManager::showSceneSettings() const
 	}
 
 	ImGui::Separator();
+	ImGui::Checkbox("Enable GTAO", &AppConfig::gtaoEnabled);
 	ImGui::DragFloat("AO Radius", &AppConfig::aoRadius, 0.01f, 0.0f, 10.0f);
 	ImGui::DragFloat("AO Intensity", &AppConfig::aoIntensity, 0.1f, 0.0f, 10.0f);
 	ImGui::DragFloat("AO Bias", &AppConfig::aoBias, 0.001f, 0.0f, 1.0f);

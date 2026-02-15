@@ -8,6 +8,7 @@ cbuffer GTAOConstants : register(b0)
 	float aoRadius;
 	float aoBias;
 	float aoIntensity;
+	uint enableGTAO;
 };
 
 Texture2D<float4> gViewNormal : register(t0);
@@ -26,28 +27,26 @@ RWTexture2D<float> gBlurredAO : register(u1);
 [numthreads(16, 16, 1)]
 void CS(uint3 DTid : SV_DISPATCHTHREADID)
 {
+	if (enableGTAO == 0)
+	{
+		gAO[DTid.xy] = 1.0f; // If GTAO is disabled, output no occlusion
+		return;
+	}
 	float2 uv = (DTid.xy + 0.5f) / float2(dimensions);
 
 	float4 viewPos = gViewPosition.SampleLevel(pointSampler, uv, 0); // in [-1,1] range
 	float3 normal = gViewNormal.SampleLevel(pointSampler, uv, 0).xyz; // currently in [0,1] range
 
-	if (length(viewPos.xyz) == 0.0f)
-	{
-		gAO[DTid.xy] = 1.0f; // No geometry, so no occlusion
-		return;
-	}
-
 	float2 noiseScale = float2(dimensions) / 4.0f; // randomRotations is a 4x4 tiling noise texture
 	float3 randomVec = normalize(randomRotations.SampleLevel(pointSampler, uv * noiseScale, 0).xyz);
 
 	float3 tangent = normalize(randomVec - normal * dot(randomVec, normal)); // Gram-Schmidt orthogonalization
-	// float3 tangent = normalize(normal); // apply random rotation to tangent
 	float3 bitangent = cross(normal, tangent);
 	float3x3 TBN = float3x3(tangent, bitangent, normal);
 
 	float occlusion = 0.0f;
 
-	for (int i = 0; i < sampleCount; ++i)
+	for (int i = 0; i < sampleCount; i++)
 	{
 		float3 samplePos = mul(kernel[i], TBN); // transform from tangent space to view space
 		samplePos = viewPos.xyz + samplePos * aoRadius; // scale by radius and translate to view space position
@@ -56,15 +55,20 @@ void CS(uint3 DTid : SV_DISPATCHTHREADID)
 		offset = mul(offset, projection);
 		offset.xyz /= offset.w;
 		offset.x = offset.x * 0.5f + 0.5f;
-		offset.z = offset.z * 0.5f + 0.5f;
 		offset.y = -offset.y * 0.5f + 0.5f; // Flip Y: clip Y is up, UV V is down
 
 		if (offset.x < 0.0f || offset.x > 1.0f || offset.y < 0.0f || offset.y > 1.0f)
 			continue; // Skip samples that are outside the screen bounds
 
 		float sampleDepth = gViewPosition.SampleLevel(pointSampler, offset.xy, 0).z; // get depth value of kernel sample
-		float rangeCheck = smoothstep(0.0, 1.0, aoRadius / abs(viewPos.z - sampleDepth));
-		occlusion += (sampleDepth >= samplePos.z + aoBias ? 1.0 : 0.0) * rangeCheck;
+
+		float depthDelta = viewPos.z - sampleDepth;
+
+		float3 viewDir = normalize(-viewPos.xyz);
+		float NdotV = max(dot(normal, viewDir), 0.1f); //reduce bias at grazing angles
+		float angleBias = aoBias / NdotV; // Increase bias at grazing angles to reduce artifacts
+		float rangeCheck = smoothstep(0.0f, 1.0f, aoRadius / (abs(depthDelta) + 0.001f)); // Apply range check to reduce artifacts
+		occlusion += (sampleDepth <= viewPos.z - angleBias ? 1.0 : 0.0) * rangeCheck; // Apply range check to reduce " outline" artifacts
 	}
 	occlusion = 1.0f - (occlusion / float(sampleCount)); // Normalize and invert to get AO factor
 	gAO[DTid.xy] = saturate(pow(occlusion, aoIntensity)); // Apply intensity curve
@@ -78,7 +82,7 @@ void BlurCS(uint3 DTid : SV_DISPATCHTHREADID)
 
 	float2 uv = (DTid.xy + 0.5f) / float2(dimensions);
 	float result = 0.0;
-	int blurRadius = 4; // Adjust the blur radius as needed
+	int blurRadius = 2; // Adjust the blur radius as needed
 	for (int x = -blurRadius; x < blurRadius; ++x)
 	{
 		for (int y = -blurRadius; y < blurRadius; ++y)
