@@ -28,6 +28,7 @@ GTAOPass::GTAOPass(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> cont
 {
 	m_shaderManager = std::make_unique<ShaderManager>(device);
 	m_shaderManager->LoadComputeShader("gtao", ShaderManager::GetShaderPath(L"GTAO.hlsl"), "CS");
+	m_shaderManager->LoadComputeShader("gtaoBlur", ShaderManager::GetShaderPath(L"GTAO.hlsl"), "BlurCS");
 	createOrResize();
 }
 
@@ -65,6 +66,8 @@ void GTAOPass::draw(ComPtr<ID3D11ShaderResourceView> viewNormalSRV,
 	unbindShaderResources(0, 4);
 	unbindComputeUAVs(0, 1);
 	endDebugEvent();
+
+	blurAO();
 }
 
 void GTAOPass::createOrResize()
@@ -85,12 +88,20 @@ void GTAOPass::createOrResize()
 		D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
 	m_aoUAV = createUnorderedAccessView(m_aoTexture.Get(), UAVPreset::Texture2D);
 	m_aoSRV = createShaderResourceView(m_aoTexture.Get(), SRVPreset::Texture2D);
+
+	m_bluredAOTexture = createTexture2D(AppConfig::viewportWidth, AppConfig::viewportHeight,
+		DXGI_FORMAT_R32_FLOAT,
+		D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
+	m_bluredAOUAV = createUnorderedAccessView(m_bluredAOTexture.Get(), UAVPreset::Texture2D);
+	m_bluredAOSRV = createShaderResourceView(m_bluredAOTexture.Get(), SRVPreset::Texture2D);
+
 	m_rtvCollector->addRTV("GTAOPass::AO", m_aoSRV.Get());
+	m_rtvCollector->addRTV("GTAOPass::BluredAO", m_bluredAOSRV.Get());
 }
 
 ComPtr<ID3D11ShaderResourceView> GTAOPass::getAOResultSRV() const
 {
-	return m_aoSRV;
+	return m_bluredAOSRV != nullptr ? m_bluredAOSRV : m_aoSRV;
 }
 
 void GTAOPass::update(glm::mat4& projection, glm::mat4& view, glm::vec2 nearFarPlanes)
@@ -140,6 +151,29 @@ void GTAOPass::update(glm::mat4& projection, glm::mat4& view, glm::vec2 nearFarP
 		cbData->aoIntensity = AppConfig::aoIntensity;
 		m_context->Unmap(m_constantBuffer.Get(), 0);
 	}
+}
+
+void GTAOPass::blurAO()
+{
+	beginDebugEvent(L"GTAO Pass::Blur");
+	m_context->CSSetShader(m_shaderManager->getComputeShader("gtaoBlur"), nullptr, 0);
+	m_context->CSSetShaderResources(4, 1, m_aoSRV.GetAddressOf());
+
+	m_context->CSSetUnorderedAccessViews(1, 1, m_bluredAOUAV.GetAddressOf(), nullptr);
+
+	uint32_t dispatchX = static_cast<uint32_t>(
+		std::ceil((AppConfig::viewportWidth + COMPUTE_THREAD_GROUP_SIZE_MONE) / COMPUTE_THREAD_GROUP_SIZE));
+	uint32_t dispatchY = static_cast<uint32_t>(
+		std::ceil((AppConfig::viewportHeight + COMPUTE_THREAD_GROUP_SIZE_MONE) / COMPUTE_THREAD_GROUP_SIZE));
+	if (dispatchX == 0)
+		dispatchX = 1;
+	if (dispatchY == 0)
+		dispatchY = 1;
+	m_context->Dispatch(dispatchX, dispatchY, 1);
+	unbindShaderResources(4, 1);
+	unbindComputeUAVs(1, 1);
+	endDebugEvent();
+
 }
 
 float lerp(float a, float b, float f)

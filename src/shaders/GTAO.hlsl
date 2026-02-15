@@ -19,6 +19,9 @@ SamplerState pointSampler : register(s0);
 
 RWTexture2D<float> gAO : register(u0);
 
+Texture2D<float> gtaoTexture : register(t4);
+RWTexture2D<float> gBlurredAO : register(u1);
+
 
 [numthreads(16, 16, 1)]
 void CS(uint3 DTid : SV_DISPATCHTHREADID)
@@ -65,5 +68,27 @@ void CS(uint3 DTid : SV_DISPATCHTHREADID)
 	}
 	occlusion = 1.0f - (occlusion / float(sampleCount)); // Normalize and invert to get AO factor
 	gAO[DTid.xy] = saturate(pow(occlusion, aoIntensity)); // Apply intensity curve
-
 }
+
+[numthreads(16, 16, 1)]
+void BlurCS(uint3 DTid : SV_DISPATCHTHREADID)
+{
+	uint2 dimensions;
+	gtaoTexture.GetDimensions(dimensions.x, dimensions.y);
+
+	float2 uv = (DTid.xy + 0.5f) / float2(dimensions);
+	float result = 0.0;
+	int blurRadius = 4; // Adjust the blur radius as needed
+	for (int x = -blurRadius; x < blurRadius; ++x)
+	{
+		for (int y = -blurRadius; y < blurRadius; ++y)
+		{
+			uint2 offset = DTid.xy + uint2(x, y);
+			if (offset.x < 0 || offset.y < 0 || offset.x >= dimensions.x || offset.y >= dimensions.y)
+				continue; // Skip out-of-bounds samples
+			result += gtaoTexture.Load(int3(offset, 0)); // Sample neighboring pixels
+		}
+	}
+	gBlurredAO[DTid.xy] = result / ((2.0 * blurRadius) * (2.0 * blurRadius));
+}
+

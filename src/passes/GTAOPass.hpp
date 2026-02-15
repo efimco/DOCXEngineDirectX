@@ -28,6 +28,7 @@ public:
 private:
 
 	void update(glm::mat4& projection, glm::mat4& view, glm::vec2 nearFarPlanes);
+	void blurAO();
 	std::vector<glm::vec3> generateRandomSampleInHemisphere();
 	std::vector<glm::vec4> generateRandomRotations();
 
@@ -44,5 +45,11 @@ private:
 	ComPtr<ID3D11Texture2D> m_aoTexture;
 	ComPtr<ID3D11UnorderedAccessView> m_aoUAV;
 	ComPtr<ID3D11ShaderResourceView> m_aoSRV;
+
+	ComPtr<ID3D11Texture2D> m_bluredAOTexture;
+	ComPtr<ID3D11UnorderedAccessView> m_bluredAOUAV;
+	ComPtr<ID3D11ShaderResourceView> m_bluredAOSRV;
+
+
 	std::unique_ptr<RTVCollector> m_rtvCollector;
 };
