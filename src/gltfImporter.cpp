@@ -196,6 +196,10 @@ void GLTFModel::processGlb(const tinygltf::Model& model)
 
 			primitive->transform = transform;
 			primitive->name = model.nodes[meshIndex].name;
+			if (primitive->name.empty())
+			{
+				primitive->name = "Primitive";
+			}
 
 			primitive->setVertexData(std::move(vertexData));
 			primitive->setIndexData(std::move(indices));
@@ -306,6 +310,10 @@ void GLTFModel::processMaterials(const tinygltf::Model& model)
 			mat->normal = m_imageIndex[m_textureIndex[material.normalTexture.index]];
 		}
 		mat->name = material.name;
+		if (mat->name.empty())
+		{
+			mat->name = "Material_" + std::to_string(i);
+		}
 		if (material.pbrMetallicRoughness.baseColorFactor.size() == 4)
 		{
 			mat->albedoColor = glm::vec4(
@@ -319,6 +327,7 @@ void GLTFModel::processMaterials(const tinygltf::Model& model)
 		mat->metallicValue = static_cast<float>(material.pbrMetallicRoughness.metallicFactor);
 
 		auto name = material.name;
+
 		if (m_scene)
 		{
 			if (m_scene->getMaterial(name) == nullptr)
@@ -469,7 +478,6 @@ void GLTFModel::processNormalsAttribute(const tinygltf::Model& model,
 		normals.push_back(normal);
 	}
 }
-
 
 Transform GLTFModel::getTransformFromNode(const size_t meshIndex, const tinygltf::Model& model)
 {
