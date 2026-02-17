@@ -12,16 +12,17 @@
 #include "rtvCollector.hpp"
 #include "passes/basePass.hpp"
 
-class Scene;
-class SceneNode;
-class Camera;
-class Primitive;
-struct Material;
-class Light;
-class CommandManager;
-class RTVCollector;
 class BakerNode;
 class BakerPass;
+class Camera;
+class CommandManager;
+class Light;
+class Primitive;
+class RTVCollector;
+class Scene;
+class SceneNode;
+struct Material;
+struct TextureSnapshot;
 
 #define ICON_FA_CUBE "\xef\x86\xb2"		 // Mesh/Primitive
 #define ICON_FA_LIGHTBULB "\xef\x83\xab" // Light
@@ -80,6 +81,7 @@ private:
 	std::shared_ptr<Material> m_selectedMaterial = nullptr;
 
 	std::shared_ptr<BakerPass> m_blendPaintPass;  // Currently active paint window pass
+	std::shared_ptr<TextureSnapshot> m_blendPaintSnapshot;
 	bool m_showBlendPaintWindow = false;
 	float m_blendBrushSize = 10.0f;
 

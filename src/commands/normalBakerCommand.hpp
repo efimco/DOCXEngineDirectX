@@ -11,8 +11,6 @@ class Scene;
 namespace BKRCommand
 {
 
-	static constexpr std::string_view k_blendPaintName { "BlendPaint" };
-
 	// This command would apply provided TextureDelta on exec()
 	class BlendMaskApplyDeltaCommand final : public CommandBase
 	{
@@ -37,13 +35,15 @@ namespace BKRCommand
 	public:
 		BlendMaskCreateDeltaCommand(
 			std::shared_ptr<TextureHistory> textureHistory,
+			std::shared_ptr<TextureSnapshot> textureSnapshot,
 			std::shared_ptr<BakerPass> bakerPass);
 
 	protected:
 		virtual std::unique_ptr<CommandBase> exec() override;
 
 		std::shared_ptr<TextureHistory> m_textureHistory;
-		std::shared_ptr<BakerPass> m_bakerPass = nullptr;
+		std::shared_ptr<TextureSnapshot> m_textureSnapshot;
+		std::shared_ptr<BakerPass> m_bakerPass;
 	};
 
 	class ToggleSmoothNormalsCommand final : public CommandBase

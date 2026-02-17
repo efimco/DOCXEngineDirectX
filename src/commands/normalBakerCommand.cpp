@@ -32,8 +32,10 @@ namespace BKRCommand
 
 	BlendMaskCreateDeltaCommand::BlendMaskCreateDeltaCommand(
 		std::shared_ptr<TextureHistory> textureHistory,
+		std::shared_ptr<TextureSnapshot> textureSnapshot,
 		std::shared_ptr<BakerPass> bakerPass)
 		: m_textureHistory(textureHistory)
+		, m_textureSnapshot(textureSnapshot)
 		, m_bakerPass(bakerPass)
 	{
 	}
@@ -41,7 +43,7 @@ namespace BKRCommand
 	std::unique_ptr<CommandBase> BlendMaskCreateDeltaCommand::exec()
 	{
 		auto textureDelta = m_textureHistory->createDelta(
-			k_blendPaintName,
+			m_textureSnapshot,
 			m_bakerPass->getBlendTexture(),
 			m_bakerPass->getBlendTextureSRV());
 		return std::make_unique<BlendMaskApplyDeltaCommand>(m_textureHistory, textureDelta, m_bakerPass);

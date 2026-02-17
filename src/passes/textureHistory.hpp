@@ -25,6 +25,17 @@ struct TextureSnapshot
 
 struct TextureDelta
 {
+
+	enum class Status
+	{
+		Unknown = 0,
+		SnapshotEmpty,
+		SnapshotResized,
+		NoChanges,
+		Success
+	};
+
+	Status m_status = Status::Unknown;
 	uint32_t m_width = 0;
 	uint32_t m_height = 0;
 
@@ -48,18 +59,11 @@ public:
 	TextureHistory(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context);
 	~TextureHistory() override = default;
 
-	bool hasSnapshot(std::string_view name) const;
-
-	std::shared_ptr<TextureSnapshot> startSnapshot(
-		std::string_view name,
-		ComPtr<ID3D11Texture2D> texture,
-		bool forceFresh = false);
-
-	void endSnapshot(
-		std::string_view name);
+	std::shared_ptr<TextureSnapshot> createSnapshot(
+		ComPtr<ID3D11Texture2D> texture);
 
 	std::shared_ptr<TextureDelta> createDelta(
-		std::string_view name,
+		std::shared_ptr<TextureSnapshot> snapshot,
 		ComPtr<ID3D11Texture2D> texture,
 		ComPtr<ID3D11ShaderResourceView> textureSRV);
 
@@ -101,5 +105,4 @@ private:
 	static constexpr uint32_t k_textureHistoryTileSizeMOne = k_textureHistoryTileSize - 1;
 
 	ComPtr<ID3D11Buffer> m_constantBuffer;
-	StringUnorderedMap<std::shared_ptr<TextureSnapshot>> m_snapshots;
 };

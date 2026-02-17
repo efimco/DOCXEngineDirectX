@@ -15,105 +15,78 @@ TextureHistory::TextureHistory(
 		ShaderManager::GetShaderPath(L"textureHistoryDifference.hlsl"), "CS");
 }
 
-bool TextureHistory::hasSnapshot(std::string_view name) const
+std::shared_ptr<TextureSnapshot> TextureHistory::createSnapshot(
+	ComPtr<ID3D11Texture2D> texture)
 {
-	return m_snapshots.contains(name);
-}
-
-std::shared_ptr<TextureSnapshot> TextureHistory::startSnapshot(
-	std::string_view name,
-	ComPtr<ID3D11Texture2D> texture,
-	bool forceFresh)
-{
-	if (forceFresh)
-	{
-		endSnapshot(name);
-	}
-
 	D3D11_TEXTURE2D_DESC texDesc;
 	texture->GetDesc(&texDesc);
 
-	auto createNewTexture = [this] (std::string_view name, D3D11_TEXTURE2D_DESC& texDesc)
-	{
-		std::shared_ptr<TextureSnapshot> result = std::make_shared<TextureSnapshot>();
-		result->m_textureCopy = createTexture2D(
-			texDesc.Width,
-			texDesc.Height,
-			texDesc.Format,
-			D3D11_BIND_SHADER_RESOURCE);
-		result->m_textureCopySRV = createShaderResourceView(result->m_textureCopy.Get(), SRVPreset::Texture2D);
+	std::shared_ptr<TextureSnapshot> result = std::make_shared<TextureSnapshot>();
+	result->m_textureCopy = createTexture2D(
+		texDesc.Width,
+		texDesc.Height,
+		texDesc.Format,
+		D3D11_BIND_SHADER_RESOURCE);
+	result->m_textureCopySRV = createShaderResourceView(result->m_textureCopy.Get(), SRVPreset::Texture2D);
 
-		GridDims gridDims = makeGridDims(texDesc.Height, texDesc.Width);
-		if (gridDims.numTiles > 0)
-		{
-			result->m_tileIndexBuffer = createStructuredBuffer(
-				sizeof(uint32_t),
-				gridDims.numTiles,
-				SBPreset::Default);
-			result->m_tileIndexUAV = createUnorderedAccessView(
-				result->m_tileIndexBuffer.Get(),
-				UAVPreset::StructuredBuffer,
-				0,
-				gridDims.numTiles);
-			result->m_tileStagingBuffer = createStructuredBuffer(
-				sizeof(uint32_t),
-				gridDims.numTiles,
-				SBPreset::CpuRead);
-		}
-		else
-		{
-			result->m_tileIndexBuffer = nullptr;
-			result->m_tileIndexUAV = nullptr;
-			result->m_tileStagingBuffer = nullptr;
-		}
-		m_snapshots.emplace(name, result);
-		return result;
-	};
-
-	std::shared_ptr<TextureSnapshot> result;
-	auto snapshotIt = m_snapshots.find(name);
-	if (snapshotIt == m_snapshots.end())
+	GridDims gridDims = makeGridDims(texDesc.Height, texDesc.Width);
+	if (gridDims.numTiles > 0)
 	{
-		result = createNewTexture(name, texDesc);
+		result->m_tileIndexBuffer = createStructuredBuffer(
+			sizeof(uint32_t),
+			gridDims.numTiles,
+			SBPreset::Default);
+		result->m_tileIndexUAV = createUnorderedAccessView(
+			result->m_tileIndexBuffer.Get(),
+			UAVPreset::StructuredBuffer,
+			0,
+			gridDims.numTiles);
+		result->m_tileStagingBuffer = createStructuredBuffer(
+			sizeof(uint32_t),
+			gridDims.numTiles,
+			SBPreset::CpuRead);
 	}
 	else
 	{
-		result = snapshotIt->second;
-		D3D11_TEXTURE2D_DESC snapshotTexDesc;
-		result->m_textureCopy->GetDesc(&snapshotTexDesc);
-		if (snapshotTexDesc.Width != texDesc.Width || snapshotTexDesc.Height != texDesc.Height)
-		{
-			result = createNewTexture(name, texDesc);
-		}
+		result->m_tileIndexBuffer = nullptr;
+		result->m_tileIndexUAV = nullptr;
+		result->m_tileStagingBuffer = nullptr;
 	}
 
 	m_context->CopyResource(result->m_textureCopy.Get(), texture.Get());
 	return result;
 }
 
-void TextureHistory::endSnapshot(std::string_view name)
-{
-	m_snapshots.erase(name.data());
-}
-
 std::shared_ptr<TextureDelta> TextureHistory::createDelta(
-	std::string_view name,
+	std::shared_ptr<TextureSnapshot> snapshot,
 	ComPtr<ID3D11Texture2D> texture,
 	ComPtr<ID3D11ShaderResourceView> textureSRV)
 {
+	assert(snapshot != nullptr);
+
 	D3D11_TEXTURE2D_DESC texDesc;
 	texture->GetDesc(&texDesc);
 
-	auto snapshotIt = m_snapshots.find(name);
-	if (snapshotIt == m_snapshots.end())
+	auto makeEmptyResult = [height = texDesc.Height, width = texDesc.Width](TextureDelta::Status status)
 	{
-		// Cannot compute the diff - we had no snapshots for this texture
 		std::shared_ptr<TextureDelta> result = std::make_shared<TextureDelta>();
-		result->m_height = texDesc.Height;
-		result->m_width  = texDesc.Width;
+		result->m_status = status;
+		result->m_height = height;
+		result->m_width  = width;
 		return result;
+	};
+
+	if (snapshot->m_textureCopy == nullptr)
+	{
+		return makeEmptyResult(TextureDelta::Status::SnapshotEmpty);
 	}
-	std::shared_ptr<TextureSnapshot> snapshot = snapshotIt->second;
+
+	D3D11_TEXTURE2D_DESC snapshotTexDesc;
+	snapshot->m_textureCopy->GetDesc(&snapshotTexDesc);
+	if (snapshotTexDesc.Width != texDesc.Width || snapshotTexDesc.Height != texDesc.Height)
+	{
+		return makeEmptyResult(TextureDelta::Status::SnapshotResized);
+	}
 
 	GridDims gridDims = makeGridDims(texDesc.Height, texDesc.Width);
 	TextureHistoryCB textureHistoryCB;
@@ -155,11 +128,7 @@ std::shared_ptr<TextureDelta> TextureHistory::createDelta(
 
 	if (deltaIndices.empty())
 	{
-		// Diff is empty
-		std::shared_ptr<TextureDelta> result = std::make_shared<TextureDelta>();
-		result->m_height = texDesc.Height;
-		result->m_width  = texDesc.Width;
-		return result;
+		return makeEmptyResult(TextureDelta::Status::NoChanges);
 	}
 
 	return createDelta(snapshot->m_textureCopy, deltaIndices);
@@ -169,18 +138,19 @@ std::shared_ptr<TextureDelta> TextureHistory::createDelta(
 	ComPtr<ID3D11Texture2D> texture,
 	std::vector<uint16_t>& deltaIndices)
 {
-	std::shared_ptr<TextureDelta> result = std::make_shared<TextureDelta>();
-
 	D3D11_TEXTURE2D_DESC texDesc;
 	texture->GetDesc(&texDesc);
 
+	std::shared_ptr<TextureDelta> result = std::make_shared<TextureDelta>();
+	result->m_height = texDesc.Height;
+	result->m_width  = texDesc.Width;
+
 	if (deltaIndices.empty())
 	{
+		result->m_status = TextureDelta::Status::NoChanges;
 		return result;
 	}
 
-	result->m_height = texDesc.Height;
-	result->m_width = texDesc.Width;
 	result->m_textureTiles = createTexture2D(
 		k_textureHistoryTileSize,
 		k_textureHistoryTileSize,
@@ -204,6 +174,8 @@ std::shared_ptr<TextureDelta> TextureHistory::createDelta(
 		);
 		++subresourceIndex;
 	}
+
+	result->m_status = TextureDelta::Status::Success;
 	return result;
 }
 

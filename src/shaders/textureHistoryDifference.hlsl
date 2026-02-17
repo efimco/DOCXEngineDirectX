@@ -21,18 +21,19 @@ RWStructuredBuffer<uint> TileIndices : register(u0);
 // Shared variable to hold per-tile diff flag
 groupshared uint tileDiff;
 
-[numthreads(8, 8, 1)]
+[numthreads(16, 16, 1)]
 void CS(uint3 GTid : SV_GroupThreadID,
 		uint3 Gid  : SV_GroupID)
 {
 	// Pixels per thread
-	uint pxPerThread = TileSize / 8;
+	uint pxPerThread = TileSize / 16;
 
 	// Tile origin in pixel coordinates
 	uint2 tileOrigin = Gid.xy * TileSize;
 
 	// Each thread handles an px x px tile
-	uint2 threadOrigin = tileOrigin + GTid.xy * pxPerThread;
+	uint2 boxMin = tileOrigin + GTid.xy * pxPerThread;
+	uint2 boxMax = min(boxMin + pxPerThread, uint2(Width, Height));
 
 	// Initialize shared tileDiff once per group
 	if (all(GTid.xy == 0))
@@ -40,25 +41,21 @@ void CS(uint3 GTid : SV_GroupThreadID,
 
 	GroupMemoryBarrierWithGroupSync();
 
-	for (uint y = 0; y < pxPerThread; ++y)
+	bool threadDiff = false;
+	for (uint y = boxMin.y; y < boxMax.y; ++y)
 	{
-		for (uint x = 0; x < pxPerThread; ++x)
+		for (uint x = boxMin.x; x < boxMax.x; ++x)
 		{
-			uint2 pixel = threadOrigin + uint2(x, y);
-
-			// Skip pixels outside the texture bounds
-			if (pixel.x >= Width || pixel.y >= Height)
-				continue;
-
-			float a = TextureA.Load(int3(pixel, 0));
-			float b = TextureB.Load(int3(pixel, 0));
-
+			uint3 pixelCoord = uint3(x, y, 0);
+			float a = TextureA.Load(pixelCoord);
+			float b = TextureB.Load(pixelCoord);
 			// If any channel differs, mark tile as changed
-			if (any(a != b))
-			{
-			    InterlockedOr(tileDiff, 1);
-			}
+			threadDiff = threadDiff | any(a != b);
 		}
+	}
+	if (threadDiff)
+	{
+		InterlockedOr(tileDiff, 1);
 	}
 
 	GroupMemoryBarrierWithGroupSync();
