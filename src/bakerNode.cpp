@@ -6,6 +6,11 @@
 
 #include "passes/bakerPass.hpp"
 
+std::string_view BakerNode::getNodeTypename() const
+{
+	return "BakerNode";
+}
+
 LowPolyNode::LowPolyNode(const std::string_view nodeName)
 {
 	movable = false;
@@ -27,11 +32,21 @@ std::unique_ptr<SceneNode> LowPolyNode::clone() const
 	return newNode;
 }
 
+std::string_view LowPolyNode::getNodeTypename() const
+{
+	return "LowPolyNode";
+}
+
 std::unique_ptr<SceneNode> HighPolyNode::clone() const
 {
 	auto newNode = std::make_unique<HighPolyNode>(this->name);
 	newNode->copyFrom(*this);
 	return newNode;
+}
+
+std::string_view HighPolyNode::getNodeTypename() const
+{
+	return "HighPolyNode";
 }
 
 Baker::Baker(
@@ -220,6 +235,10 @@ void Baker::createOrUpdateBakerPasses()
 
 }
 
+std::string_view Baker::getNodeTypename() const
+{
+	return "Baker";
+}
 
 void Baker::updateState()
 {

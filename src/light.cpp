@@ -74,3 +74,34 @@ std::unique_ptr<SceneNode> Light::clone() const
 	lightNode->copyFrom(*this);
 	return lightNode;
 }
+
+std::string_view Light::getNodeTypename() const
+{
+	return "Light";
+}
+
+void Light::load(Nodes::LoadContext& loadContext, nlohmann::json& json)
+{
+	SceneNode::load(loadContext, json);
+
+	json.at("intensity").get_to(intensity);
+	Nodes::loadVec3(json, "color", color);
+	Nodes::loadVec3(json, "direction", direction);
+	Nodes::loadVec3(json, "attenuation", attenuation);
+	Nodes::loadVec2(json, "spotParams", spotParams);
+	json.at("radius").get_to(radius);
+	json.at("type").get_to(type);
+}
+
+void Light::save(Nodes::SaveContext& saveContext, nlohmann::json& json) const
+{
+	SceneNode::save(saveContext, json);
+
+	json.emplace("intensity", intensity);
+	Nodes::saveVec3(json, "color", color);
+	Nodes::saveVec3(json, "direction", direction);
+	Nodes::saveVec3(json, "attenuation", attenuation);
+	Nodes::saveVec2(json, "spotParams", spotParams);
+	json.emplace("radius", radius);
+	json.emplace("type", type);
+}

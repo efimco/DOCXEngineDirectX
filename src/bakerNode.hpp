@@ -17,6 +17,10 @@ class BakerNode : public SceneNode
 public:
 	explicit BakerNode() = default;
 	~BakerNode() override = default;
+
+protected:
+	virtual std::string_view getNodeTypename() const;
+
 };
 
 class LowPolyNode : public BakerNode
@@ -25,6 +29,10 @@ public:
 	explicit LowPolyNode(const std::string_view nodeName);
 	~LowPolyNode() override = default;
 	std::unique_ptr<SceneNode> clone() const override;
+
+protected:
+	virtual std::string_view getNodeTypename() const;
+
 };
 
 class HighPolyNode : public BakerNode
@@ -33,6 +41,10 @@ public:
 	explicit HighPolyNode(const std::string_view nodeName);
 	~HighPolyNode() override = default;
 	std::unique_ptr<SceneNode> clone() const override;
+
+protected:
+	virtual std::string_view getNodeTypename() const;
+
 };
 
 class Baker : public BakerNode
@@ -76,4 +88,8 @@ private:
 	std::vector<std::shared_ptr<Material>> m_materialsToBake;
 	std::unordered_map<std::string, std::pair<std::vector<Primitive*>, std::vector<Primitive*>>> m_materialsPrimitivesMap;
 	std::unordered_map<std::string, std::shared_ptr<BakerPass>> m_materialsBakerPasses;
+
+protected:
+	virtual std::string_view getNodeTypename() const;
+
 };

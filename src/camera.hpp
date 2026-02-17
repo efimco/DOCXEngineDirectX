@@ -37,4 +37,10 @@ private:
 	void copyFrom(const SceneNode& node) override;
 	bool differsFrom(const SceneNode& node) const override;
 	std::unique_ptr<SceneNode> clone() const override;
+
+protected:
+	virtual std::string_view getNodeTypename() const;
+	virtual void load(Nodes::LoadContext& loadContext, nlohmann::json& json);
+	virtual void save(Nodes::SaveContext& saveContext, nlohmann::json& json) const;
+
 };

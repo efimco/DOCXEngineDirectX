@@ -1,6 +1,7 @@
 #include "scene.hpp"
 
 #include <consoleapi.h>
+#include <fstream>
 #include <iostream>
 #include <ranges>
 
@@ -11,10 +12,11 @@
 #include "primitive.hpp"
 #include "texture.hpp"
 
-Scene::Scene(const std::string_view name, ComPtr<ID3D11Device> device)
+Scene::Scene(const std::string_view name, ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> context)
 {
 	this->name = name;
 	m_device = device;
+	m_context = context;
 	nodeHandle = SceneNodeHandle::generateHandle();
 }
 
@@ -703,10 +705,46 @@ std::shared_ptr<ImportProgress> Scene::getImportProgress() const noexcept
 
 void Scene::saveScene(std::string_view filepath)
 {
+	Nodes::SaveContext saveContext;
+
+	auto nodesArr = nlohmann::json::array();
+	for (auto& child : children)
+	{
+		auto childrenObj = nlohmann::json::object();
+		child->save(saveContext, childrenObj);
+		nodesArr.emplace_back(childrenObj);
+	}
+
+	auto sceneObj = nlohmann::json::object();
+	sceneObj.emplace("nodes", nodesArr);
+
+	{
+		std::ofstream ostream{ filepath.data() };
+		ostream << sceneObj.dump(2);
+	}
 }
 
 void Scene::loadScene(std::string_view filepath)
 {
+	Nodes::LoadContext loadContext;
+	loadContext.scene = this;
+	loadContext.device = m_device;
+	loadContext.context = m_context;
+
+	std::string jsonString;
+	{
+		auto size = std::filesystem::file_size(filepath);
+		jsonString.resize(size);
+		std::ifstream istream{ filepath.data() };
+		istream.read(jsonString.data(), size);
+	}
+
+	auto sceneObj = nlohmann::json::parse(jsonString);
+	for (auto& nodeObj : sceneObj.at("nodes"))
+	{
+		std::unique_ptr<SceneNode> node = Nodes::loadNodeFromJson(loadContext, nodeObj);
+		addChild(std::move(node));
+	}
 }
 
 void Scene::clearScene()

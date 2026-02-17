@@ -166,3 +166,18 @@ void Camera::focusOn(Primitive* primitive)
 
 	updateCameraVectors();
 }
+
+std::string_view Camera::getNodeTypename() const
+{
+	return "Camera";
+}
+
+void Camera::load(Nodes::LoadContext& loadContext, nlohmann::json& json)
+{
+	SceneNode::load(loadContext, json);
+}
+
+void Camera::save(Nodes::SaveContext& saveContext, nlohmann::json& json) const
+{
+	SceneNode::save(saveContext, json);
+}

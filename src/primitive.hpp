@@ -88,4 +88,10 @@ private:
 	void createGPUBuffers();
 	std::shared_ptr<SharedPrimitiveData> m_sharedData;
 	ComPtr<ID3D11Device> m_device;
+
+protected:
+	virtual std::string_view getNodeTypename() const;
+	virtual void load(Nodes::LoadContext& loadContext, nlohmann::json& json);
+	virtual void save(Nodes::SaveContext& saveContext, nlohmann::json& json) const;
+
 };

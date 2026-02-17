@@ -5,9 +5,11 @@
 #include <string>
 
 #include <glm/glm.hpp>
+#include <json.hpp>
 
 #include "sceneNodeHandle.hpp"
 #include "transform.hpp"
+#include "utility/nodeHelpers.hpp"
 
 class Scene;
 
@@ -36,6 +38,10 @@ public:
 	virtual void copyFrom(const SceneNode& node);
 	virtual bool differsFrom(const SceneNode& node) const;
 	virtual std::unique_ptr<SceneNode> clone() const;
+
+	virtual std::string_view getNodeTypename() const;
+	virtual void load(Nodes::LoadContext& loadContext, nlohmann::json& json);
+	virtual void save(Nodes::SaveContext& saveContext, nlohmann::json& json) const;
 
 	int getChildIndex(const SceneNode* child) const;
 	glm::mat4 getWorldMatrix();

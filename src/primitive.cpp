@@ -551,3 +551,18 @@ void Primitive::GeneratePlane(std::vector<Vertex>& outVertices, std::vector<uint
 	outIndices.push_back(3);
 	outIndices.push_back(2);
 }
+
+std::string_view Primitive::getNodeTypename() const
+{
+	return "Primitive";
+}
+
+void Primitive::load(Nodes::LoadContext& loadContext, nlohmann::json& json)
+{
+	SceneNode::load(loadContext, json);
+}
+
+void Primitive::save(Nodes::SaveContext& saveContext, nlohmann::json& json) const
+{
+	SceneNode::save(saveContext, json);
+}

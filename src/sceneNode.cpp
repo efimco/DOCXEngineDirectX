@@ -5,6 +5,7 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/matrix_decompose.hpp>
 #include "scene.hpp"
+#include "utility/nodeHelpers.hpp"
 
 SceneNode::SceneNode(SceneNode&& other) noexcept
 	: transform(other.transform)
@@ -58,6 +59,60 @@ std::unique_ptr<SceneNode> SceneNode::clone() const
 	auto newNode = std::make_unique<SceneNode>(this->name);
 	newNode->copyFrom(*this);
 	return newNode;
+}
+
+std::string_view SceneNode::getNodeTypename() const
+{
+	return "SceneNode";
+}
+
+void SceneNode::load(Nodes::LoadContext& loadContext, nlohmann::json& json)
+{
+	Nodes::loadXForm(json, "transform", transform);
+
+	json.at("name").get_to(name);
+	json.at("visible").get_to(visible);
+	json.at("movable").get_to(movable);
+	json.at("deletable").get_to(deletable);
+	json.at("canBecomeParent").get_to(canBecomeParent);
+
+	Scene* scene = loadContext.scene;
+	auto& childrenArr = json.at("children");
+	if (childrenArr.is_array())
+	{
+		for (auto& childJson : childrenArr)
+		{
+			if (childJson.is_object())
+			{
+				auto childNode = Nodes::loadNodeFromJson(loadContext, childJson);
+				if (childNode)
+				{
+					scene->addChild(std::move(childNode));
+					scene->reparentChild(childNode.get(), this);
+				}
+			}
+		}
+	}
+}
+
+void SceneNode::save(Nodes::SaveContext& saveContext, nlohmann::json& json) const
+{
+	auto childrenArr = nlohmann::json::array();
+	for (auto& child : children)
+	{
+		auto childrenObj = nlohmann::json::object();
+		child->save(saveContext, childrenObj);
+		childrenArr.emplace_back(childrenObj);
+	}
+
+	Nodes::saveXForm(json, "transform", transform);
+	json.emplace("__type__", getNodeTypename());
+	json.emplace("name", name);
+	json.emplace("visible", visible);
+	json.emplace("movable", movable);
+	json.emplace("deletable", deletable);
+	json.emplace("canBecomeParent", canBecomeParent);
+	json.emplace("children", childrenArr);
 }
 
 void SceneNode::addChild(std::unique_ptr<SceneNode>&& child, int index)

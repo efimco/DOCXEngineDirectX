@@ -30,7 +30,10 @@ using namespace Microsoft::WRL;
 class Scene : public SceneNode
 {
 public:
-	explicit Scene(std::string_view name = "Default Scene", ComPtr<ID3D11Device> device = nullptr);
+	explicit Scene(
+		std::string_view name = "Default Scene",
+		ComPtr<ID3D11Device> device = nullptr,
+		ComPtr<ID3D11DeviceContext> context = nullptr);
 	~Scene() override = default;
 
 	SceneNodeHandle findHandleOfNode(SceneNode* node) const;
@@ -120,6 +123,7 @@ private:
 	std::future<AsyncImportResult> m_importFuture;
 	std::shared_ptr<ImportProgress> m_importProgress;
 	ComPtr<ID3D11Device> m_device;
+	ComPtr<ID3D11DeviceContext> m_context;
 	std::vector<PendingTextureReload> m_pendingTextureReloads;
 
 	std::unordered_set<SceneNode*> m_selectedNodes;
